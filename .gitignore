@@ -1,0 +1,11 @@
+# ไม่ส่งโฟลเดอร์เก็บไฟล์ Excel ดิบขึ้น GitHub
+Order/
+*.xlsx
+*.xls
+*.csv
+
+# ไม่ส่งไฟล์ข้อมูลขนาดใหญ่ขึ้นไป
+orders.json
+
+# ละเว้นโฟลเดอร์ไลบรารีของ Node.js
+node_modules/
