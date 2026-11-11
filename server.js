@@ -10,9 +10,21 @@ app.use(cors());
 app.use(express.static(__dirname));
 
 const ORDER_DIR = path.join(__dirname, 'Order');
+const JSON_FILE = path.join(__dirname, 'orders.json');
 
 let cachedOrders = [];
 let isProcessing = false;
+
+function cleanSellerSku(rawSku) {
+  if (!rawSku || rawSku === '-' || String(rawSku).trim() === '') return 'Uncategorized';
+  const str = String(rawSku).trim();
+  if (str.includes('_')) {
+    const parts = str.split('_');
+    parts.shift();
+    return parts.join('_').trim() || str;
+  }
+  return str;
+}
 
 function parseDateParts(val) {
   if (!val) return null;
@@ -206,9 +218,15 @@ function extractRowData(row) {
   const pNameLower = (productName || '').toLowerCase();
   const rawSkuLower = String(sku || '').toLowerCase();
   const rawSellerSkuLower = String(sellerSku || '').toLowerCase();
+  const cleanSku = cleanSellerSku(sellerSku);
 
   // ตรวจจับ 1D, 1Day, WTP, INF1
   const isExplicitGwp = (
+    cleanSku.toUpperCase() === '1D' ||
+    cleanSku.toUpperCase() === '1DAY' ||
+    cleanSku.toUpperCase() === 'WTP' ||
+    cleanSku.toUpperCase().includes('INF1') ||
+    cleanSku.toUpperCase().includes('GWP') ||
     rawSellerSkuLower.includes('wtp') ||
     rawSkuLower.includes('wtp') ||
     pNameLower.includes('wtp') ||
@@ -269,13 +287,21 @@ async function preloadOrderData() {
   if (isProcessing) return;
   isProcessing = true;
   console.time('⚡ ประมวลผลข้อมูลเสร็จสิ้นใน');
-  console.log('🔄 กำลังอ่านไฟล์คำสั่งซื้อจากโฟลเดอร์ Order...');
 
   try {
+    // 1. ถ้ามี orders.json ให้โหลดจาก JSON ทันที (เร็วมากใน 0.1s ไม่เปลือง RAM)
+    if (fs.existsSync(JSON_FILE)) {
+      console.log('🚀 พบไฟล์ orders.json กำลังโหลดข้อมูลทันที...');
+      const dataStr = fs.readFileSync(JSON_FILE, 'utf8');
+      cachedOrders = JSON.parse(dataStr);
+      console.log(`✅ โหลดข้อมูลจาก orders.json สำเร็จ: ${cachedOrders.length.toLocaleString()} รายการ`);
+      return;
+    }
+
+    // 2. ถ้าไม่มี orders.json ให้อ่านจากโฟลเดอร์ Order ตามเดิม
+    console.log('🔄 ไม่พบ orders.json กำลังอ่านไฟล์คำสั่งซื้อจากโฟลเดอร์ Order...');
     if (!fs.existsSync(ORDER_DIR)) {
-      console.log(`❌ ไม่พบโฟลเดอร์: ${ORDER_DIR} -> กำลังสร้างโฟลเดอร์อัตโนมัติ...`);
-      fs.mkdirSync(ORDER_DIR, { recursive: true });
-      isProcessing = false;
+      console.log(`❌ ไม่พบโฟลเดอร์: ${ORDER_DIR}`);
       return;
     }
 
