@@ -21,7 +21,7 @@ function loadData() {
       console.error('❌ อ่านไฟล์ summary.json ไม่สำเร็จ:', e.message);
     }
   } else {
-    console.warn('⚠️ ไม่พบ summary.json');
+    console.warn('⚠️ ไม่พบ summary.json ในไดเรกทอรี');
   }
 }
 
@@ -29,7 +29,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// ส่งข้อมูลสรุปให้แดชบอร์ดหน้าบ้าน
 app.get('/api/orders', (req, res) => {
   if (!cachedData) {
     loadData();
