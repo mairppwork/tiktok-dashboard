@@ -50,7 +50,6 @@
         </div>
       </div>
 
-      <!-- เมนูสลับหน้าระหว่าง Dashboard และ GWP View -->
       <nav class="space-y-1.5 text-xs font-semibold">
         <button id="navDashboard" onclick="switchMainPage('dashboard')" class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-[#faeeef] text-[#ea5a7e] transition font-bold">
           <span>📊</span>
@@ -132,7 +131,7 @@
       </div>
     </header>
 
-    <!-- CONTENT BODY (SCROLLABLE) -->
+    <!-- CONTENT BODY -->
     <div class="flex-1 overflow-y-auto px-6 py-5 custom-scroll space-y-6">
 
       <!-- ================= หน้า 1: DASHBOARD ทั่วไป ================= -->
@@ -268,10 +267,9 @@
           </div>
         </div>
 
-        <!-- MIDDLE ROW: [ประมูลนาทีทอง] (ซ้าย 4 Cols) & [TOP 10 SELLING PRODUCTS] (ขวา 8 Cols) -->
+        <!-- MIDDLE ROW: [ประมูลนาทีทอง] & [TOP 10 SELLING PRODUCTS] -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           
-          <!-- กล่องซ้าย: ประมูลนาทีทอง -->
           <div class="lg:col-span-4 card-clean p-5 flex flex-col h-[640px]">
             <div class="border-b border-stone-100 pb-3 shrink-0">
               <div class="flex items-center justify-between">
@@ -301,7 +299,6 @@
             </div>
           </div>
 
-          <!-- กล่องขวา: สินค้าขายดีติด Top 10 -->
           <div class="lg:col-span-8 card-clean p-5 flex flex-col h-[640px]">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-stone-100 pb-3 shrink-0">
               <div>
@@ -346,7 +343,6 @@
                   <span>🏷️</span> สรุปตามหมวดสินค้า (Seller SKU Summary)
                 </h3>
 
-                <!-- ปุ่มสลับเลือกดู SKU ขาย VS Seller SKU ของแถม -->
                 <div class="inline-flex bg-[#eee7df] p-0.5 rounded-xl text-xs font-bold border border-[#dfd6cd] ml-2">
                   <button id="btnSkuModeSale" onclick="setSkuSummaryMode('sale')" class="px-3 py-1 rounded-lg bg-white text-stone-900 shadow-2xs transition">
                     🛒 SKU ขาย
@@ -395,7 +391,7 @@
           </div>
         </div>
 
-      </div> <!-- จบหน้า DASHBOARD -->
+      </div>
 
       <!-- ================= หน้า 2: GWP & GIFTS PAGE ================= -->
       <div id="pageGwp" class="space-y-6 hidden">
@@ -424,12 +420,11 @@
             </div>
           </div>
 
-          <!-- กริดการ์ดแสดงของแถมแบบเต็มหน้าจอ -->
           <div id="gwpPageGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
             <p class="text-xs text-stone-400 italic py-12 text-center col-span-3">กำลังโหลดข้อมูลของแถม...</p>
           </div>
         </div>
-      </div> <!-- จบหน้า GWP -->
+      </div>
 
     </div>
   </main>
@@ -512,7 +507,7 @@
       const btnYear = document.getElementById('btnYear');
       const btnMonth = document.getElementById('btnMonth');
       const monthWrapper = document.getElementById('monthSelectorWrapper');
-      const dayWrapper = document.getElementById('dayWrapper');
+      const dayWrapper = document.getElementById('daySelectorWrapper');
       const monthFilter = document.getElementById('monthFilter');
       const dayFilter = document.getElementById('dayFilter');
 
@@ -575,7 +570,6 @@
       badge.className = 'text-[11px] bg-amber-50 text-amber-700 font-bold px-2.5 py-1 rounded-full border border-amber-200';
 
       try {
-        // ใช้ Relative Path /api/orders เพื่อให้ทำงานได้ทั้งบนเครื่อง Local และบน Cloud Domain
         const res = await fetch('/api/orders');
         const data = await res.json();
 
@@ -821,7 +815,6 @@
         const orderKey = o.orderId || `${rawName}_${Math.random()}`;
         const itemKey = `${rawName}___${rawSku}`;
 
-        // ตรวจสอบ 1D / 1Day / WTP / INF1 แบบครอบคลุม 100%
         const isExplicitGwpCode = (
           cleanSku.toUpperCase() === '1D' ||
           cleanSku.toUpperCase() === '1DAY' ||
@@ -849,7 +842,6 @@
           sellerSkuLower.includes('gwp')
         );
 
-        // ตัดสิน GWP
         const isGift = (
           o.isGWP ||
           o.amount === 0 ||
@@ -900,7 +892,6 @@
             else gwpMap[itemKey].canceledCount += 1;
           }
 
-          // หมวด Seller SKU ของแถม
           const skuGroupKey = cleanSku;
           if (!sellerSkuGwpMap[skuGroupKey]) {
             sellerSkuGwpMap[skuGroupKey] = {
@@ -948,7 +939,6 @@
             else auctionMap[itemKey].canceledCount += 1;
           }
 
-          // หมวด Seller SKU ขาย
           const skuGroupKey = cleanSku;
           if (!sellerSkuSaleMap[skuGroupKey]) {
             sellerSkuSaleMap[skuGroupKey] = {
@@ -971,7 +961,7 @@
             else sellerSkuSaleMap[skuGroupKey].canceledCount += 1;
           }
         } 
-        // 3. สินค้าขายปกติ (Top Products)
+        // 3. สินค้าขายปกติ
         else {
           const finalName = rawName || 'สินค้า TikTok Shop';
           if (!topMap[itemKey]) {
@@ -994,7 +984,6 @@
             else topMap[itemKey].canceledCount += 1;
           }
 
-          // หมวด Seller SKU ขาย
           const skuGroupKey = cleanSku;
           if (!sellerSkuSaleMap[skuGroupKey]) {
             sellerSkuSaleMap[skuGroupKey] = {

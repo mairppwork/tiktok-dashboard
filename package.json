@@ -4,7 +4,7 @@
   "description": "TikTok Shop Marketing Dashboard",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node --max-old-space-size=450 server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

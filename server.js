@@ -9,7 +9,6 @@ const app = express();
 app.use(cors());
 app.use(express.static(__dirname));
 
-// ใช้ Relative Path สำหรับรันได้ทั้งบน Local และ Cloud (Render.com)
 const ORDER_DIR = path.join(__dirname, 'Order');
 
 let cachedOrders = [];
@@ -157,7 +156,7 @@ function extractRowData(row) {
       actualPaidItemPriceRaw = val;
     }
 
-    // 9. Order Amount (ยอดรวมทั้งคำสั่งซื้อ)
+    // 9. Order Amount
     if (orderAmountRaw === null && (
       keyLower.includes('orderamount') ||
       keyLower.includes('orderamoud') ||
@@ -208,7 +207,7 @@ function extractRowData(row) {
   const rawSkuLower = String(sku || '').toLowerCase();
   const rawSellerSkuLower = String(sellerSku || '').toLowerCase();
 
-  // ตรวจจับ 1D, 1Day, WTP, INF1 ทุกรูปแบบ
+  // ตรวจจับ 1D, 1Day, WTP, INF1
   const isExplicitGwp = (
     rawSellerSkuLower.includes('wtp') ||
     rawSkuLower.includes('wtp') ||
@@ -232,7 +231,6 @@ function extractRowData(row) {
     rawSellerSkuLower.includes('gwp')
   );
 
-  // ตัดสินว่าเป็น GWP
   const isGWP = (
     cleanItemPaidPrice === 0 ||
     cleanOrderAmount === 0 ||
@@ -275,7 +273,8 @@ async function preloadOrderData() {
 
   try {
     if (!fs.existsSync(ORDER_DIR)) {
-      console.log(`❌ ไม่พบโฟลเดอร์: ${ORDER_DIR}`);
+      console.log(`❌ ไม่พบโฟลเดอร์: ${ORDER_DIR} -> กำลังสร้างโฟลเดอร์อัตโนมัติ...`);
+      fs.mkdirSync(ORDER_DIR, { recursive: true });
       isProcessing = false;
       return;
     }
@@ -285,16 +284,27 @@ async function preloadOrderData() {
 
     for (const file of files) {
       const filePath = path.join(ORDER_DIR, file);
+      console.log(`📂 กำลังอ่านไฟล์: ${file}`);
 
       if (file.endsWith('.xlsx') || file.endsWith('.xls')) {
-        const workbook = xlsx.readFile(filePath, { dense: true });
+        const workbook = xlsx.readFile(filePath, { 
+          dense: true,
+          cellStyles: false,
+          cellHTML: false,
+          cellFormula: false
+        });
+
         const sheetName = workbook.SheetNames[0];
-        const rows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+        const sheet = workbook.Sheets[sheetName];
+        const rows = xlsx.utils.sheet_to_json(sheet, { defval: '' });
 
         for (let i = 0; i < rows.length; i++) {
           const item = extractRowData(rows[i]);
           if (item) allRows.push(item);
         }
+
+        delete workbook.Sheets[sheetName];
+        delete workbook.Sheets;
       } else if (file.endsWith('.csv')) {
         await new Promise((resolve) => {
           fs.createReadStream(filePath)
@@ -347,7 +357,6 @@ app.get('/api/reload', async (req, res) => {
   res.json({ success: true, count: cachedOrders.length });
 });
 
-// รองรับ Port ของ Render.com
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   console.log(`🚀 Server พร้อมทำงานแล้วที่ Port: ${PORT}`);
