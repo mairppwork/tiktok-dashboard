@@ -1,172 +1,142 @@
-const fs = require('fs');
-const path = require('path');
-const xlsx = require('xlsx');
+let summaryData = null;
 
-const ORDER_DIR = path.join(__dirname, 'Order');
-const OUTPUT_FILE = path.join(__dirname, 'orders.json');
+    async function fetchOrders() {
+      const badge = document.getElementById('syncStatusBadge');
+      badge.innerText = '● Syncing...';
+      badge.className = 'text-[11px] bg-amber-50 text-amber-700 font-bold px-2.5 py-1 rounded-full border border-amber-200';
 
-console.log('🔄 กำลังอ่านและบีบอัดข้อมูลเป็น orders.json (โหมดลดขนาดไฟล์)...');
+      try {
+        const res = await fetch('/api/orders');
+        const result = await res.json();
 
-if (!fs.existsSync(ORDER_DIR)) {
-  console.log('❌ ไม่พบโฟลเดอร์ Order');
-  process.exit(1);
-}
+        if (result.success && result.data) {
+          summaryData = result.data;
+          badge.innerText = `● Synced Ready`;
+          badge.className = 'text-[11px] bg-[#faeeef] text-[#ea5a7e] font-bold px-2.5 py-1 rounded-full border border-[#f5d5db]';
 
-const files = fs.readdirSync(ORDER_DIR).filter(f => f.endsWith('.xlsx') || f.endsWith('.csv') || f.endsWith('.xls'));
-const allRows = [];
+          const yearSelect = document.getElementById('yearFilter');
+          yearSelect.innerHTML = '';
+          (summaryData.years || ['2026']).forEach(y => {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.innerText = y;
+            yearSelect.appendChild(opt);
+          });
 
-function cleanSellerSku(rawSku) {
-  if (!rawSku || rawSku === '-' || String(rawSku).trim() === '') return 'Uncategorized';
-  const str = String(rawSku).trim();
-  if (str.includes('_')) {
-    const parts = str.split('_');
-    parts.shift();
-    return parts.join('_').trim() || str;
-  }
-  return str;
-}
+          currentTopProductsList = summaryData.topProducts || [];
+          currentAuctionList = summaryData.auctionProducts || [];
+          currentGwpList = summaryData.gwpItems || [];
+          currentSellerSkuSaleList = summaryData.sellerSkuSale || [];
+          currentSellerSkuGwpList = summaryData.sellerSkuGwp || [];
 
-function parseDateParts(val) {
-  if (!val) return null;
-  if (typeof val === 'number') {
-    const dateObj = xlsx.SSF.parse_date_code(val);
-    if (dateObj) {
-      return {
-        year: String(dateObj.y),
-        month: String(dateObj.m).padStart(2, '0'),
-        day: String(dateObj.d).padStart(2, '0')
-      };
-    }
-  }
-  const str = String(val).trim();
-  const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if (dmyMatch) {
-    return {
-      year: dmyMatch[3],
-      month: dmyMatch[2].padStart(2, '0'),
-      day: dmyMatch[1].padStart(2, '0')
-    };
-  }
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    return {
-      year: String(d.getFullYear()),
-      month: String(d.getMonth() + 1).padStart(2, '0'),
-      day: String(d.getDate()).padStart(2, '0')
-    };
-  }
-  return null;
-}
-
-for (const file of files) {
-  console.log(`📂 อ่านไฟล์: ${file}`);
-  const wb = xlsx.readFile(path.join(ORDER_DIR, file), { 
-    dense: true, 
-    cellStyles: false, 
-    cellHTML: false, 
-    cellFormula: false 
-  });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = xlsx.utils.sheet_to_json(sheet, { defval: '' });
-
-  for (const row of rows) {
-    let orderId = '';
-    let buyer = '';
-    let productName = '';
-    let sku = '-';
-    let sellerSku = '-';
-    let quantity = 1;
-    let dateRaw = '';
-    let orderAmountRaw = null;
-    let itemPriceRaw = null;
-    let statusRaw = '';
-
-    for (const k of Object.keys(row)) {
-      const keyTrim = k.trim();
-      const keyLower = keyTrim.toLowerCase().replace(/[\s_\-]/g, '');
-      const val = row[k];
-
-      if (!productName && (keyTrim.toLowerCase() === 'product name' || keyLower === 'productname' || keyTrim.includes('ชื่อสินค้า'))) {
-        if (val) productName = String(val).trim();
-      }
-      if (!sellerSku && (keyTrim.toLowerCase() === 'seller sku' || keyLower === 'sellersku' || keyTrim.includes('SKU ผู้ขาย'))) {
-        if (val) sellerSku = String(val).trim();
-      }
-      if (!sku && (keyTrim.toLowerCase() === 'sku id' || keyLower === 'skuid' || keyTrim.includes('รหัส SKU') || keyLower === 'sku')) {
-        if (val) sku = String(val).trim();
-      }
-      if (!orderId && (keyLower.includes('orderid') || keyLower.includes('หมายเลขคำสั่งซื้อ') || keyLower === 'id')) {
-        orderId = String(val).trim();
-      }
-      if (!buyer && (keyLower.includes('buyer') || keyLower.includes('ผู้ซื้อ') || keyLower.includes('username'))) {
-        buyer = String(val).trim();
-      }
-      if (keyLower.includes('quantity') || keyLower.includes('จำนวน') || keyLower === 'qty') {
-        const q = parseInt(val);
-        if (!isNaN(q) && q > 0) quantity = q;
-      }
-      if (!dateRaw && (keyLower.includes('createdtime') || keyLower.includes('ordertime') || keyLower.includes('วันที่สร้าง') || keyLower.includes('date'))) {
-        dateRaw = val;
-      }
-      if (itemPriceRaw === null && (keyLower.includes('skusubtotalafterdiscount') || keyLower.includes('itemamount') || keyLower.includes('ราคาหลังหักส่วนลด'))) {
-        itemPriceRaw = val;
-      }
-      if (orderAmountRaw === null && (keyLower.includes('orderamount') || keyLower.includes('ยอดรวมของคำสั่งซื้อ') || keyLower === 'gmv')) {
-        orderAmountRaw = val;
-      }
-      if (!statusRaw && (keyLower.includes('orderstatus') || keyLower.includes('สถานะคำสั่งซื้อ') || keyLower === 'status')) {
-        statusRaw = String(val).trim();
+          populateDayDropdown();
+          renderDashboard();
+        }
+      } catch (err) {
+        console.error(err);
+        badge.innerText = '● Server Offline';
       }
     }
 
-    const dateParts = parseDateParts(dateRaw) || { year: '2026', month: '01', day: '01' };
-    const amount = parseFloat(String(orderAmountRaw || 0).replace(/[^0-9.-]+/g, '')) || 0;
-    const itemPaid = itemPriceRaw !== null ? parseFloat(String(itemPriceRaw).replace(/[^0-9.-]+/g, '')) || 0 : amount;
-    const sLower = statusRaw.toLowerCase();
-    const isCanceled = sLower.includes('cancel') || sLower.includes('ยกเลิก') || sLower.includes('refund');
+    function renderDashboard() {
+      if (!summaryData || !summaryData.timeline) return;
 
-    const pLower = (productName || '').toLowerCase();
-    const sLowerSku = String(sellerSku || '').toLowerCase();
-    const skuLower = String(sku || '').toLowerCase();
-    const cleanSku = cleanSellerSku(sellerSku);
+      const selectedYear = document.getElementById('yearFilter').value;
+      const selectedMonth = document.getElementById('monthFilter').value;
+      const selectedDay = document.getElementById('dayFilter').value;
 
-    const isExplicitGwp = (
-      cleanSku.toUpperCase() === '1D' ||
-      cleanSku.toUpperCase() === '1DAY' ||
-      cleanSku.toUpperCase() === 'WTP' ||
-      cleanSku.toUpperCase().includes('INF1') ||
-      cleanSku.toUpperCase().includes('GWP') ||
-      sLowerSku.includes('wtp') || sLowerSku.includes('inf1') || sLowerSku.includes('1day') ||
-      skuLower.includes('wtp') || skuLower.includes('inf1') ||
-      pLower.includes('1day') || /\b1d\b/.test(pLower)
-    );
+      const yNode = summaryData.timeline[selectedYear] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, months: {} };
 
-    const isGWP = (
-      itemPaid === 0 || amount === 0 || isExplicitGwp ||
-      skuLower.includes('gwp') || sLowerSku.includes('gwp') ||
-      pLower.includes('ซองกันน้ำ') || pLower.includes('ของแถม') || pLower.includes('not for sale')
-    );
+      let labels = [];
+      let compCountList = [];
+      let cancCountList = [];
+      let compGmvList = [];
+      let cancGmvList = [];
+      let totalComp = 0, totalCanc = 0, totalCompGmv = 0, totalCancGmv = 0, totalBuyers = 0;
 
-    // เก็บเฉพาะข้อมูลที่จำเป็นและย่อความยาวตัวอักษร
-    allRows.push({
-      orderId: orderId,
-      buyer: buyer ? buyer.substring(0, 15) : 'Customer',
-      productName: productName.substring(0, 80),
-      sku: sku,
-      sellerSku: sellerSku,
-      quantity,
-      year: dateParts.year,
-      month: dateParts.month,
-      day: dateParts.day,
-      amount: isGWP ? 0 : amount,
-      status: isCanceled ? 'Canceled' : 'Completed',
-      isGWP
-    });
-  }
-}
+      if (currentMode === 'year') {
+        document.getElementById('periodHeading').innerText = `สรุปภาพรวมคำสั่งซื้อ: ประจำปี ${selectedYear} (ทั้งปี)`;
+        document.getElementById('chartSubText').innerText = `สถิติคำสั่งซื้อแยกตาม 12 เดือน ประจำปี ${selectedYear}`;
 
-// เขียนไฟล์แบบ Compact (ไม่เว้นวรรค)
-fs.writeFileSync(OUTPUT_FILE, JSON.stringify(allRows));
-const stats = fs.statSync(OUTPUT_FILE);
-const mb = (stats.size / (1024 * 1024)).toFixed(2);
-console.log(`\n🎉 แปลงไฟล์สำเร็จ! ขนาดไฟล์ orders.json ใหม่: ${mb} MB (เป้าหมาย < 50 MB)`);
+        labels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+        for (let i = 1; i <= 12; i++) {
+          const mStr = String(i).padStart(2, '0');
+          const mNode = yNode.months[mStr] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0 };
+          compCountList.push(mNode.compCount);
+          cancCountList.push(mNode.cancCount);
+          compGmvList.push(mNode.compGmv);
+          cancGmvList.push(mNode.cancGmv);
+        }
+
+        totalComp = yNode.compCount;
+        totalCanc = yNode.cancCount;
+        totalCompGmv = yNode.compGmv;
+        totalCancGmv = yNode.cancGmv;
+        totalBuyers = yNode.buyersCount;
+      } else {
+        const mNode = yNode.months[selectedMonth] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, days: {} };
+        const daysInMonth = new Date(selectedYear, parseInt(selectedMonth), 0).getDate();
+
+        if (selectedDay === 'all') {
+          document.getElementById('periodHeading').innerText = `สรุปภาพรวมคำสั่งซื้อ: เดือน ${selectedMonth}/${selectedYear} (ทั้งเดือน)`;
+          document.getElementById('chartSubText').innerText = `สถิติคำสั่งซื้อรายวัน วันที่ 1 - ${daysInMonth}`;
+
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dStr = String(d).padStart(2, '0');
+            labels.push(`วันที่ ${d}`);
+            const dNode = mNode.days[dStr] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0 };
+            compCountList.push(dNode.compCount);
+            cancCountList.push(dNode.cancCount);
+            compGmvList.push(dNode.compGmv);
+            cancGmvList.push(dNode.cancGmv);
+          }
+
+          totalComp = mNode.compCount;
+          totalCanc = mNode.cancCount;
+          totalCompGmv = mNode.compGmv;
+          totalCancGmv = mNode.cancGmv;
+          totalBuyers = mNode.buyersCount;
+        } else {
+          document.getElementById('periodHeading').innerText = `สรุปภาพรวมคำสั่งซื้อ: วันที่ ${parseInt(selectedDay)} เดือน ${selectedMonth}/${selectedYear}`;
+          labels.push(`วันที่ ${parseInt(selectedDay)}`);
+          const dNode = mNode.days[selectedDay] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0 };
+          compCountList.push(dNode.compCount);
+          cancCountList.push(dNode.cancCount);
+          compGmvList.push(dNode.compGmv);
+          cancGmvList.push(dNode.cancGmv);
+
+          totalComp = dNode.compCount;
+          totalCanc = dNode.cancCount;
+          totalCompGmv = dNode.compGmv;
+          totalCancGmv = dNode.cancGmv;
+          totalBuyers = dNode.buyersCount;
+        }
+      }
+
+      const totalOrders = totalComp + totalCanc;
+      const totalGmv = totalCompGmv + totalCancGmv;
+      currentTotalGmv = totalGmv;
+
+      const compRate = totalOrders > 0 ? ((totalComp / totalOrders) * 100).toFixed(1) : '0.0';
+      const cancRate = totalOrders > 0 ? ((totalCanc / totalOrders) * 100).toFixed(1) : '0.0';
+      const aov = totalComp > 0 ? (totalCompGmv / totalComp) : 0;
+
+      document.getElementById('cardTotalGmv').innerText = '฿' + totalGmv.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      document.getElementById('cardTotalOrders').innerText = totalOrders.toLocaleString();
+      document.getElementById('cardTotalBuyers').innerText = totalBuyers.toLocaleString();
+      document.getElementById('cardAov').innerText = '฿' + aov.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+      document.getElementById('txtCompCount').innerText = `${totalComp.toLocaleString()} ออเดอร์`;
+      document.getElementById('badgeCompRate').innerText = `${compRate}%`;
+      document.getElementById('txtCompGmv').innerText = '฿' + totalCompGmv.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+      document.getElementById('txtCancCount').innerText = `${totalCanc.toLocaleString()} ออเดอร์`;
+      document.getElementById('badgeCancRate').innerText = `${cancRate}%`;
+      document.getElementById('txtCancGmv').innerText = '฿' + totalCancGmv.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+      renderBarChart(labels, compCountList, cancCountList, compGmvList, cancGmvList);
+      renderAuctionList();
+      filterProductDisplay();
+      filterSellerSkuDisplay();
+    }
