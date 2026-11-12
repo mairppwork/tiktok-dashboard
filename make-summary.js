@@ -3,14 +3,14 @@ const path = require('path');
 const xlsx = require('xlsx');
 
 const orderDir = path.join(__dirname, 'Order');
-console.log('🔄 เริ่มต้นสรุปสถิติ (โหมดกิน RAM น้อยที่สุด)...');
+console.log('🔄 เริ่มต้นประมวลผลข้อมูลจากโฟลเดอร์ Order...');
 
 if (!fs.existsSync(orderDir)) {
-  console.error('❌ ไม่พบโฟลเดอร์ Order');
+  console.error('❌ ไม่พบโฟลเดอร์ Order กรุณาตรวจสอบว่าโฟลเดอร์วางอยู่ระดับเดียวกับไฟล์นี้');
   process.exit(1);
 }
 
-const files = fs.readdirSync(orderDir).filter(f => f.endsWith('.xlsx') || f.endsWith('.csv'));
+const files = fs.readdirSync(orderDir).filter(f => f.endsWith('.xlsx') || f.endsWith('.csv') || f.endsWith('.xls'));
 
 function cleanSellerSku(rawSku) {
   if (!rawSku || rawSku === '-' || String(rawSku).trim() === '') return 'Uncategorized';
@@ -39,13 +39,12 @@ function parseDateParts(val) {
 
 const timeline = {};
 const topProductsMap = {};
+const auctionMap = {};
 const gwpMap = {};
-const sellerSkuSaleMap = {};
-const sellerSkuGwpMap = {};
 const allYears = new Set();
 
 for (const file of files) {
-  console.log(`Processing: ${file}`);
+  console.log(`📂 กำลังอ่านไฟล์: ${file}`);
   const wb = xlsx.readFile(path.join(orderDir, file), { dense: true, cellStyles: false, cellHTML: false, cellFormula: false });
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const rows = xlsx.utils.sheet_to_json(sheet, { defval: '' });
@@ -79,6 +78,7 @@ for (const file of files) {
     const sLowerSku = String(sellerSku).toLowerCase();
     const cleanSku = cleanSellerSku(sellerSku);
 
+    // ตรวจสอบกลุ่มของแถม (GWP)
     const isExplicitGwp = (
       cleanSku.toUpperCase() === '1D' || cleanSku.toUpperCase() === '1DAY' || cleanSku.toUpperCase() === 'WTP' ||
       cleanSku.toUpperCase().includes('INF1') || cleanSku.toUpperCase().includes('GWP') ||
@@ -91,68 +91,92 @@ for (const file of files) {
       sLowerSku.includes('gwp') || pLower.includes('ซองกันน้ำ') || pLower.includes('ของแถม')
     );
 
+    // ตรวจสอบกลุ่มประมูล (นาทีทอง / ประมูล / action)
+    const isAuction = !isGWP && (
+      pLower.includes('นาทีทอง') || 
+      pLower.includes('ประมูล') || 
+      pLower.includes('action')
+    );
+
     const yr = dParts.year, mo = dParts.month, dy = dParts.day;
     allYears.add(yr);
 
-    if (!timeline[yr]) timeline[yr] = { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyers: new Set(), months: {} };
-    if (!timeline[yr].months[mo]) timeline[yr].months[mo] = { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyers: new Set(), days: {} };
-    if (!timeline[yr].months[mo].days[dy]) timeline[yr].months[mo].days[dy] = { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyers: new Set() };
+    if (!timeline[yr]) timeline[yr] = { compOrders: new Set(), cancOrders: new Set(), compGmv: 0, cancGmv: 0, buyers: new Set(), months: {} };
+    if (!timeline[yr].months[mo]) timeline[yr].months[mo] = { compOrders: new Set(), cancOrders: new Set(), compGmv: 0, cancGmv: 0, buyers: new Set(), days: {} };
+    if (!timeline[yr].months[mo].days[dy]) timeline[yr].months[mo].days[dy] = { compOrders: new Set(), cancOrders: new Set(), compGmv: 0, cancGmv: 0, buyers: new Set() };
 
-    const bId = buyer || orderId || 'C';
+    const oId = orderId || `${productName}_${Math.random()}`;
+    const bId = buyer || oId;
+
     [timeline[yr], timeline[yr].months[mo], timeline[yr].months[mo].days[dy]].forEach(node => {
       node.buyers.add(bId);
       if (isCompleted) {
-        node.compCount++;
-        if (!isGWP) node.compGmv += cleanAmount;
+        if (!node.compOrders.has(oId)) {
+          node.compOrders.add(oId);
+          if (!isGWP) node.compGmv += cleanAmount;
+        }
       } else {
-        node.cancCount++;
-        if (!isGWP) node.cancGmv += cleanAmount;
+        if (!node.cancOrders.has(oId)) {
+          node.cancOrders.add(oId);
+          if (!isGWP) node.cancGmv += cleanAmount;
+        }
       }
     });
 
-    const targetProductMap = isGWP ? gwpMap : topProductsMap;
+    // แยกเก็บลงตารางตามหมวดหมู่
+    const targetMap = isGWP ? gwpMap : (isAuction ? auctionMap : topProductsMap);
     const itemKey = `${productName}___${sku}`;
-    if (!targetProductMap[itemKey]) targetProductMap[itemKey] = { name: productName, sku, quantity: 0, totalAmount: 0 };
-    targetProductMap[itemKey].quantity += quantity;
-    if (!isGWP && isCompleted) targetProductMap[itemKey].totalAmount += cleanAmount;
-
-    const targetSkuMap = isGWP ? sellerSkuGwpMap : sellerSkuSaleMap;
-    if (!targetSkuMap[cleanSku]) targetSkuMap[cleanSku] = { name: cleanSku, sku: cleanSku, quantity: 0, totalAmount: 0 };
-    targetSkuMap[cleanSku].quantity += quantity;
-    if (!isGWP && isCompleted) targetSkuMap[cleanSku].totalAmount += cleanAmount;
+    if (!targetMap[itemKey]) {
+      targetMap[itemKey] = { name: productName || 'สินค้าไม่ระบุชื่อ', sku, quantity: 0, completedCount: 0, canceledCount: 0, totalAmount: 0, _seen: new Set() };
+    }
+    targetMap[itemKey].quantity += quantity;
+    if (!targetMap[itemKey]._seen.has(oId)) {
+      targetMap[itemKey]._seen.add(oId);
+      if (isCompleted) {
+        targetMap[itemKey].completedCount++;
+        if (!isGWP) targetMap[itemKey].totalAmount += cleanAmount;
+      } else {
+        targetMap[itemKey].canceledCount++;
+      }
+    }
   }
 }
 
-// แปลง Set เป็นตัวเลข เพื่อให้ไฟล์ JSON มีขนาดเล็กที่สุด
 const cleanTimeline = {};
+let grandTotalOrders = 0;
+
 for (const yr of Object.keys(timeline)) {
   const y = timeline[yr];
+  grandTotalOrders += y.compOrders.size + y.cancOrders.size;
   cleanTimeline[yr] = {
-    compCount: y.compCount, cancCount: y.cancCount, compGmv: Math.round(y.compGmv), cancGmv: Math.round(y.cancGmv), buyersCount: y.buyers.size, months: {}
+    compCount: y.compOrders.size, cancCount: y.cancOrders.size, compGmv: Math.round(y.compGmv), cancGmv: Math.round(y.cancGmv), buyersCount: y.buyers.size, months: {}
   };
   for (const mo of Object.keys(y.months)) {
     const m = y.months[mo];
     cleanTimeline[yr].months[mo] = {
-      compCount: m.compCount, cancCount: m.cancCount, compGmv: Math.round(m.compGmv), cancGmv: Math.round(m.cancGmv), buyersCount: m.buyers.size, days: {}
+      compCount: m.compOrders.size, cancCount: m.cancOrders.size, compGmv: Math.round(m.compGmv), cancGmv: Math.round(m.cancGmv), buyersCount: m.buyers.size, days: {}
     };
     for (const dy of Object.keys(m.days)) {
       const d = m.days[dy];
       cleanTimeline[yr].months[mo].days[dy] = {
-        compCount: d.compCount, cancCount: d.cancCount, compGmv: Math.round(d.compGmv), cancGmv: Math.round(d.cancGmv), buyersCount: d.buyers.size
+        compCount: d.compOrders.size, cancCount: d.cancOrders.size, compGmv: Math.round(d.compGmv), cancGmv: Math.round(d.cancGmv), buyersCount: d.buyers.size
       };
     }
   }
 }
 
+const sanitizeList = (map, sortBy) => Object.values(map).map(item => { delete item._seen; return item; }).sort((a, b) => b[sortBy] - a[sortBy]).slice(0, 50);
+
 const finalOutput = {
+  totalCount: grandTotalOrders,
   years: Array.from(allYears).sort().reverse(),
   timeline: cleanTimeline,
-  topProducts: Object.values(topProductsMap).sort((a,b) => b.totalAmount - a.totalAmount).slice(0, 50),
-  gwpItems: Object.values(gwpMap).sort((a,b) => b.quantity - a.quantity).slice(0, 50),
-  sellerSkuSale: Object.values(sellerSkuSaleMap).sort((a,b) => b.totalAmount - a.totalAmount).slice(0, 50),
-  sellerSkuGwp: Object.values(sellerSkuGwpMap).sort((a,b) => b.quantity - a.quantity).slice(0, 50)
+  topProducts: sanitizeList(topProductsMap, 'totalAmount'),
+  auctionProducts: sanitizeList(auctionMap, 'totalAmount'),
+  gwpItems: sanitizeList(gwpMap, 'quantity')
 };
 
-fs.writeFileSync(path.join(__dirname, 'summary.json'), JSON.stringify(finalOutput));
-const kb = (fs.statSync('summary.json').size / 1024).toFixed(1);
-console.log(`\n🎉 สรุปสำเร็จ! ได้ summary.json ขนาดเพียง: ${kb} KB (รับประกันไม่เกิน RAM แน่นอน)`);
+const outPath = path.join(__dirname, 'summary.json');
+fs.writeFileSync(outPath, JSON.stringify(finalOutput));
+const kb = (fs.statSync(outPath).size / 1024).toFixed(1);
+console.log(`\n🎉 สรุปยอดเสร็จสิ้น! บันทึกเป็น summary.json ขนาด: ${kb} KB (พบสินค้าประมูล ${finalOutput.auctionProducts.length} รายการ)`);

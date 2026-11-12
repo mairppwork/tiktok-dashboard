@@ -594,7 +594,8 @@
         const amt = parseFloat(o.amount) || 0;
         const pName = o.product || o.productName || 'สินค้าทั่วไป';
         const sku = o.sku || '-';
-        const isAuction = pName.includes('นาทีทอง') || pName.includes('ประมูล');
+        const pLower = pName.toLowerCase();
+        const isAuction = pLower.includes('นาทีทอง') || pLower.includes('ประมูล') || pLower.includes('action');
         const isGwp = amt === 0 || pName.includes('ของแถม') || pName.includes('ซองกันน้ำ');
 
         [timeline[yr], timeline[yr].months[mo], timeline[yr].months[mo].days[dy]].forEach(node => {
