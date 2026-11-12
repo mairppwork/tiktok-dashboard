@@ -3,7 +3,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 
 const orderDir = path.join(__dirname, 'Order');
-console.log('🔄 เริ่มต้นประมวลผลข้อมูลฉบับสมบูรณ์ (สัดส่วน + Forecast + เทียบวัน)...');
+console.log('🔄 เริ่มต้นประมวลผลข้อมูลแบบแยกตามวัน/เดือน/ปี และแยกรายสินค้าครบถ้วน...');
 
 if (!fs.existsSync(orderDir)) {
   console.error('❌ ไม่พบโฟลเดอร์ Order');
@@ -13,7 +13,7 @@ if (!fs.existsSync(orderDir)) {
 const files = fs.readdirSync(orderDir).filter(f => f.endsWith('.xlsx') || f.endsWith('.csv') || f.endsWith('.xls'));
 
 function cleanSellerSku(rawSku) {
-  if (!rawSku || rawSku === '-' || String(rawSku).trim() === '') return 'Uncategorized';
+  if (!rawSku || rawSku === '-' || String(rawSku).trim() === '') return '';
   const str = String(rawSku).trim();
   if (str.includes('_')) {
     const parts = str.split('_');
@@ -37,14 +37,28 @@ function parseDateParts(val) {
   return null;
 }
 
+// ตัวช่วยสร้างกล่องเก็บข้อมูลของแต่ละช่วงเวลา (ปี / เดือน / วัน)
+function createPeriodNode() {
+  return {
+    compOrders: new Set(),
+    cancOrders: new Set(),
+    compGmv: 0,
+    cancGmv: 0,
+    buyers: new Set(),
+    regGmv: 0,
+    aucGmv: 0,
+    gwpQty: 0,
+    statusMap: {},
+    products: {}, // เก็บ topProducts ของช่วงเวลานั้น
+    auctions: {}, // เก็บ auctionProducts ของช่วงเวลานั้น
+    gwps: {}      // เก็บ gwpItems ของช่วงเวลานั้น
+  };
+}
+
 const timeline = {};
-const topProductsMap = {};
-const auctionMap = {};
-const gwpMap = {};
-const sellerSkuMap = {};
-const statusBreakdown = {}; // เก็บสัดส่วนทุกสถานะในไฟล์
+const forecastSkuMap = {};
 const allYears = new Set();
-const activeMonthsSet = new Set(); // เก็บจำนวนเดือนที่มีข้อมูลจริงเพื่อหารค่าเฉลี่ย Forecast
+const activeMonthsSet = new Set();
 
 for (const file of files) {
   console.log(`📂 กำลังอ่านไฟล์: ${file}`);
@@ -54,7 +68,7 @@ for (const file of files) {
 
   for (const row of rows) {
     let orderId = '', buyer = '', productName = '', sku = '-', sellerSku = '-', quantity = 1;
-    let dateRaw = '', amount = 0, itemPaid = null, statusRaw = 'Completed', province = '';
+    let dateRaw = '', amount = 0, itemPaid = null, statusRaw = 'Completed';
 
     for (const k of Object.keys(row)) {
       const kl = k.trim().toLowerCase().replace(/[\s_\-]/g, '');
@@ -69,7 +83,6 @@ for (const file of files) {
       if (itemPaid === null && (kl.includes('skusubtotalafterdiscount') || kl.includes('ราคาหลังหักส่วนลด'))) itemPaid = parseFloat(String(v).replace(/[^0-9.-]+/g, '')) || 0;
       if (!amount && (kl.includes('orderamount') || kl.includes('ยอดรวมของคำสั่งซื้อ') || kl === 'gmv')) amount = parseFloat(String(v).replace(/[^0-9.-]+/g, '')) || 0;
       if (kl.includes('orderstatus') || kl.includes('สถานะ')) statusRaw = String(v).trim() || 'Completed';
-      if (!province && (kl.includes('province') || kl.includes('จังหวัด'))) province = String(v).trim();
     }
 
     const dParts = parseDateParts(dateRaw) || { year: '2026', month: '01', day: '01' };
@@ -82,9 +95,6 @@ for (const file of files) {
     const paid = itemPaid !== null ? itemPaid : cleanAmount;
     const isCanceled = statusRaw.toLowerCase().includes('cancel') || statusRaw.includes('ยกเลิก');
     const isCompleted = !isCanceled;
-
-    // เก็บสัดส่วนทุกสถานะดิบจากไฟล์
-    statusBreakdown[statusRaw] = (statusBreakdown[statusRaw] || 0) + 1;
 
     const pLower = productName.toLowerCase();
     const sLowerSku = String(sellerSku).toLowerCase();
@@ -108,20 +118,28 @@ for (const file of files) {
       pLower.includes('action')
     );
 
-    // โครงสร้าง Timeline ละเอียดถึงระดับวัน (รองรับเปรียบเทียบวันข้ามเดือน/ข้ามปี)
-    if (!timeline[yr]) timeline[yr] = { compOrders: new Set(), cancOrders: new Set(), compGmv: 0, cancGmv: 0, buyers: new Set(), months: {} };
-    if (!timeline[yr].months[mo]) timeline[yr].months[mo] = { compOrders: new Set(), cancOrders: new Set(), compGmv: 0, cancGmv: 0, buyers: new Set(), days: {} };
-    if (!timeline[yr].months[mo].days[dy]) timeline[yr].months[mo].days[dy] = { compOrders: new Set(), cancOrders: new Set(), compGmv: 0, cancGmv: 0, buyers: new Set(), gwpQty: 0, auctionGmv: 0 };
+    // สร้างโหนด ปี -> เดือน -> วัน
+    if (!timeline[yr]) timeline[yr] = { ...createPeriodNode(), months: {} };
+    if (!timeline[yr].months[mo]) timeline[yr].months[mo] = { ...createPeriodNode(), days: {} };
+    if (!timeline[yr].months[mo].days[dy]) timeline[yr].months[mo].days[dy] = createPeriodNode();
 
     const oId = orderId || `${productName}_${Math.random()}`;
     const bId = buyer || oId;
+    const itemKey = `${productName || 'สินค้าไม่ระบุชื่อ'}___${sku}`;
 
+    // บันทึกข้อมูลลงทั้ง 3 ระดับ (ปี, เดือน, วัน)
     [timeline[yr], timeline[yr].months[mo], timeline[yr].months[mo].days[dy]].forEach(node => {
       node.buyers.add(bId);
+      node.statusMap[statusRaw] = (node.statusMap[statusRaw] || 0) + 1;
+
       if (isCompleted) {
         if (!node.compOrders.has(oId)) {
           node.compOrders.add(oId);
-          if (!isGWP) node.compGmv += cleanAmount;
+          if (!isGWP) {
+            node.compGmv += cleanAmount;
+            if (isAuction) node.aucGmv += cleanAmount;
+            else node.regGmv += cleanAmount;
+          }
         }
       } else {
         if (!node.cancOrders.has(oId)) {
@@ -129,72 +147,109 @@ for (const file of files) {
           if (!isGWP) node.cancGmv += cleanAmount;
         }
       }
+
+      if (isGWP) node.gwpQty += quantity;
+
+      // เก็บรายการสินค้าแยกตามช่วงเวลา
+      const targetBucket = isGWP ? node.gwps : (isAuction ? node.auctions : node.products);
+      if (!targetBucket[itemKey]) {
+        targetBucket[itemKey] = { name: productName || 'สินค้าไม่ระบุชื่อ', sku, quantity: 0, completedCount: 0, canceledCount: 0, totalAmount: 0, _seen: new Set() };
+      }
+      targetBucket[itemKey].quantity += quantity;
+      if (!targetBucket[itemKey]._seen.has(oId)) {
+        targetBucket[itemKey]._seen.add(oId);
+        if (isCompleted) {
+          targetBucket[itemKey].completedCount++;
+          if (!isGWP) targetBucket[itemKey].totalAmount += cleanAmount;
+        } else {
+          targetBucket[itemKey].canceledCount++;
+        }
+      }
     });
 
-    if (isGWP) timeline[yr].months[mo].days[dy].gwpQty += quantity;
-    if (isAuction && isCompleted) timeline[yr].months[mo].days[dy].auctionGmv += cleanAmount;
+    // แก้ไขปัญหา Forecast รวมเหลือ 2 ตัว: ใช้รหัส SKU + ชื่อสินค้าเป็น Key เพื่อแยกสินค้าทุกตัวชัดเจน
+    const displaySku = cleanSku || (sku !== '-' ? sku : 'NO-SKU');
+    const forecastKey = `${displaySku}___${productName || 'ไม่ระบุชื่อ'}___${isGWP ? 'GWP' : 'SALE'}`;
 
-    // เก็บข้อมูล Seller SKU รายเดือน เพื่อใช้คำนวณ Forecast แม่นยำ
-    const skuKey = `${cleanSku}___${isGWP ? 'GWP' : 'SALE'}`;
-    if (!sellerSkuMap[skuKey]) {
-      sellerSkuMap[skuKey] = {
-        sellerSku: cleanSku,
-        sampleName: productName,
+    if (!forecastSkuMap[forecastKey]) {
+      forecastSkuMap[forecastKey] = {
+        sellerSku: displaySku,
+        sampleName: productName || 'สินค้าไม่ระบุชื่อ',
         type: isGWP ? 'GWP' : (isAuction ? 'Auction' : 'Regular'),
         totalQty: 0,
         completedQty: 0,
-        totalGmv: 0,
-        monthlyQty: {} // เก็บยอดขายแต่ละเดือน เช่น { '2026-01': 120, '2026-02': 150 }
+        monthlyQty: {}
       };
     }
-    sellerSkuMap[skuKey].totalQty += quantity;
+    forecastSkuMap[forecastKey].totalQty += quantity;
     if (isCompleted) {
-      sellerSkuMap[skuKey].completedQty += quantity;
-      sellerSkuMap[skuKey].monthlyQty[ymKey] = (sellerSkuMap[skuKey].monthlyQty[ymKey] || 0) + quantity;
-      if (!isGWP) sellerSkuMap[skuKey].totalGmv += cleanAmount;
-    }
-
-    // เก็บตารางสินค้า
-    const targetMap = isGWP ? gwpMap : (isAuction ? auctionMap : topProductsMap);
-    const itemKey = `${productName}___${sku}`;
-    if (!targetMap[itemKey]) {
-      targetMap[itemKey] = { name: productName || 'สินค้าไม่ระบุชื่อ', sku, sellerSku: cleanSku, quantity: 0, completedCount: 0, canceledCount: 0, totalAmount: 0, _seen: new Set() };
-    }
-    targetMap[itemKey].quantity += quantity;
-    if (!targetMap[itemKey]._seen.has(oId)) {
-      targetMap[itemKey]._seen.add(oId);
-      if (isCompleted) {
-        targetMap[itemKey].completedCount++;
-        if (!isGWP) targetMap[itemKey].totalAmount += cleanAmount;
-      } else {
-        targetMap[itemKey].canceledCount++;
-      }
+      forecastSkuMap[forecastKey].completedQty += quantity;
+      forecastSkuMap[forecastKey].monthlyQty[ymKey] = (forecastSkuMap[forecastKey].monthlyQty[ymKey] || 0) + quantity;
     }
   }
 }
 
-// คำนวณ Forecast ราย SKU สำหรับเดือนถัดไป
+// แปลงข้อมูลแต่ละ Period ให้เป็น JSON ขนาดกะทัดรัด (จำกัด Top 25 ต่อวัน เพื่อไม่ให้ไฟล์ใหญ่เกินไป)
+function serializeNode(node, limit = 30) {
+  const cleanBucket = (bucket, sortKey) => Object.values(bucket)
+    .map(item => { const copy = { ...item }; delete copy._seen; return copy; })
+    .sort((a, b) => b[sortKey] - a[sortKey])
+    .slice(0, limit);
+
+  return {
+    compCount: node.compOrders.size,
+    cancCount: node.cancOrders.size,
+    compGmv: Math.round(node.compGmv),
+    cancGmv: Math.round(node.cancGmv),
+    buyersCount: node.buyers.size,
+    regGmv: Math.round(node.regGmv),
+    aucGmv: Math.round(node.aucGmv),
+    gwpQty: node.gwpQty,
+    statusBreakdown: node.statusMap,
+    topProducts: cleanBucket(node.products, 'totalAmount'),
+    auctionProducts: cleanBucket(node.auctions, 'totalAmount'),
+    gwpItems: cleanBucket(node.gwps, 'quantity')
+  };
+}
+
+const cleanTimeline = {};
+let grandTotalOrders = 0;
+
+for (const yr of Object.keys(timeline)) {
+  const y = timeline[yr];
+  grandTotalOrders += y.compOrders.size + y.cancOrders.size;
+  cleanTimeline[yr] = { ...serializeNode(y, 50), months: {} };
+
+  for (const mo of Object.keys(y.months)) {
+    const m = y.months[mo];
+    cleanTimeline[yr].months[mo] = { ...serializeNode(m, 40), days: {} };
+
+    for (const dy of Object.keys(m.days)) {
+      const d = m.days[dy];
+      cleanTimeline[yr].months[mo].days[dy] = serializeNode(d, 20);
+    }
+  }
+}
+
+// คำนวณ Forecast แยกรายสินค้าทุกตัว
 const sortedMonths = Array.from(activeMonthsSet).sort();
 const numMonths = Math.max(sortedMonths.length, 1);
 const latestMonth = sortedMonths[sortedMonths.length - 1];
 const prevMonth = sortedMonths.length > 1 ? sortedMonths[sortedMonths.length - 2] : latestMonth;
 
-const forecastList = Object.values(sellerSkuMap).map(item => {
+const forecastList = Object.values(forecastSkuMap).map(item => {
   const avgMonthly = item.completedQty / numMonths;
   const lastM = item.monthlyQty[latestMonth] || 0;
   const prevM = item.monthlyQty[prevMonth] || lastM;
 
-  // คำนวณอัตราการเติบโต (Growth Rate) แบบจำกัดเพดานไม่ให้เพี้ยน (-30% ถึง +50%)
   let growthRate = 0;
   if (prevM > 0 && sortedMonths.length > 1) {
-    growthRate = (lastM - prevM) / prevM;
-    growthRate = Math.max(-0.3, Math.min(0.5, growthRate));
+    growthRate = Math.max(-0.3, Math.min(0.5, (lastM - prevM) / prevM));
   }
 
-  // สูตรพยากรณ์: (ค่าเฉลี่ยรายเดือน 60% + เดือนล่าสุด 40%) * (1 + แนวโน้มเติบโต)
   const baseForecast = sortedMonths.length > 1 ? (avgMonthly * 0.6) + (lastM * 0.4) : lastM;
-  const predictedSales = Math.ceil(baseForecast * (1 + growthRate));
-  const recommendedOrder = Math.ceil(predictedSales * 1.15); // บวก Safety Stock 15%
+  const predictedSales = Math.max(1, Math.ceil(baseForecast * (1 + growthRate)));
+  const recommendedOrder = Math.ceil(predictedSales * 1.15);
 
   return {
     sellerSku: item.sellerSku,
@@ -209,45 +264,15 @@ const forecastList = Object.values(sellerSkuMap).map(item => {
   };
 }).sort((a, b) => b.recommendedRestock - a.recommendedRestock);
 
-// แปลง Timeline
-const cleanTimeline = {};
-let grandTotalOrders = 0;
-
-for (const yr of Object.keys(timeline)) {
-  const y = timeline[yr];
-  grandTotalOrders += y.compOrders.size + y.cancOrders.size;
-  cleanTimeline[yr] = {
-    compCount: y.compOrders.size, cancCount: y.cancOrders.size, compGmv: Math.round(y.compGmv), cancGmv: Math.round(y.cancGmv), buyersCount: y.buyers.size, months: {}
-  };
-  for (const mo of Object.keys(y.months)) {
-    const m = y.months[mo];
-    cleanTimeline[yr].months[mo] = {
-      compCount: m.compOrders.size, cancCount: m.cancOrders.size, compGmv: Math.round(m.compGmv), cancGmv: Math.round(m.cancGmv), buyersCount: m.buyers.size, days: {}
-    };
-    for (const dy of Object.keys(m.days)) {
-      const d = m.days[dy];
-      cleanTimeline[yr].months[mo].days[dy] = {
-        compCount: d.compOrders.size, cancCount: d.cancOrders.size, compGmv: Math.round(d.compGmv), cancGmv: Math.round(d.cancGmv), buyersCount: d.buyers.size, gwpQty: d.gwpQty, auctionGmv: Math.round(d.auctionGmv)
-      };
-    }
-  }
-}
-
-const sanitizeList = (map, sortBy) => Object.values(map).map(item => { delete item._seen; return item; }).sort((a, b) => b[sortBy] - a[sortBy]).slice(0, 60);
-
 const finalOutput = {
   totalCount: grandTotalOrders,
   activeMonths: sortedMonths,
-  statusBreakdown,
   years: Array.from(allYears).sort().reverse(),
   timeline: cleanTimeline,
-  topProducts: sanitizeList(topProductsMap, 'totalAmount'),
-  auctionProducts: sanitizeList(auctionMap, 'totalAmount'),
-  gwpItems: sanitizeList(gwpMap, 'quantity'),
   forecast: forecastList
 };
 
 const outPath = path.join(__dirname, 'summary.json');
 fs.writeFileSync(outPath, JSON.stringify(finalOutput));
 const kb = (fs.statSync(outPath).size / 1024).toFixed(1);
-console.log(`\n🎉 สรุปยอดเสร็จสิ้น! บันทึกเป็น summary.json ขนาด: ${kb} KB (คำนวณ Forecast ${forecastList.length} SKUs)`);
+console.log(`\n🎉 สรุปยอดสำเร็จ! ขนาดไฟล์: ${kb} KB (พบสินค้าในหน้า Forecast ทั้งหมด ${forecastList.length} รายการ)`);

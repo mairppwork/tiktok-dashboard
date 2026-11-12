@@ -34,14 +34,14 @@
         </div>
       </div>
 
-      <!-- Period Filters -->
+      <!-- Period Filters (เปลี่ยนข้อมูลทุกหน้าทันทีเมื่อเลือก) -->
       <div class="flex items-center gap-2 flex-wrap">
         <div class="bg-slate-100 p-1 rounded-lg flex items-center text-xs">
           <button id="btnModeYear" onclick="setMode('year')" class="px-3 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-sm transition">ทั้งปี</button>
-          <button id="btnModeMonth" onclick="setMode('month')" class="px-3 py-1 rounded-md text-slate-500 hover:text-slate-900 transition">รายเดือน/วัน</button>
+          <button id="btnModeMonth" onclick="setMode('month')" class="px-3 py-1 rounded-md text-slate-500 hover:text-slate-900 transition">รายเดือน / รายวัน</button>
         </div>
 
-        <select id="monthFilter" onchange="renderDashboard()" class="text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 outline-none">
+        <select id="monthFilter" onchange="onMonthOrYearChange()" class="text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 outline-none">
           <option value="01">ม.ค. (Jan)</option>
           <option value="02">ก.พ. (Feb)</option>
           <option value="03">มี.ค. (Mar)</option>
@@ -56,11 +56,11 @@
           <option value="12">ธ.ค. (Dec)</option>
         </select>
 
-        <select id="dayFilter" onchange="renderDashboard()" class="text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 outline-none">
+        <select id="dayFilter" onchange="onDaySelectChange()" class="text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 outline-none">
           <option value="all">ทั้งเดือน</option>
         </select>
 
-        <select id="yearFilter" onchange="populateDayDropdown(); renderDashboard();" class="text-xs bg-white border border-slate-200 text-slate-800 font-semibold rounded-lg px-2.5 py-1.5 outline-none">
+        <select id="yearFilter" onchange="onMonthOrYearChange()" class="text-xs bg-white border border-slate-200 text-slate-800 font-semibold rounded-lg px-2.5 py-1.5 outline-none">
           <option value="2026">2026</option>
         </select>
       </div>
@@ -85,7 +85,6 @@
       <div class="space-y-1">
         <p class="px-2.5 pt-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Menu</p>
 
-        <!-- Parent Menu: Order -->
         <div>
           <button onclick="toggleOrderSubmenu()" class="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-800 hover:bg-slate-100/80 transition">
             <span class="flex items-center gap-2">
@@ -125,8 +124,8 @@
       </div>
 
       <div class="p-3 rounded-xl bg-blue-50/70 border border-blue-100 text-[11px] text-slate-600">
-        <p class="font-bold text-blue-900 mb-0.5">AI Restock Engine</p>
-        <p class="leading-relaxed">คำนวณสต็อกเดือนหน้าอัตโนมัติพร้อมเผื่อ Safety Stock 15%</p>
+        <p class="font-bold text-blue-900 mb-0.5">Dynamic Filter</p>
+        <p class="leading-relaxed">เลือกวัน เดือน หรือปีด้านบน ข้อมูลทุกตารางจะอัปเดตตามทันที</p>
       </div>
     </aside>
 
@@ -137,7 +136,7 @@
       <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div>
           <h1 id="periodHeading" class="text-xl font-bold text-slate-900 tracking-tight">Reports & Analytics: ประจำปี 2026</h1>
-          <p class="text-xs text-slate-500 mt-0.5">สรุปข้อมูลทั้งหมดในไฟล์เป็นสัดส่วน พยากรณ์ยอดสั่งซื้อ และเปรียบเทียบยอดขายรายวัน</p>
+          <p class="text-xs text-slate-500 mt-0.5">แสดงสัดส่วนข้อมูลจริงตามช่วงเวลาที่เลือก พยากรณ์สต็อกเดือนหน้า และเปรียบเทียบรายวัน</p>
         </div>
 
         <!-- Quick Pills -->
@@ -151,12 +150,8 @@
         </div>
       </div>
 
-      <!-- ===================================================================== -->
-      <!-- VIEW 1: ภาพรวม & สัดส่วนข้อมูลทั้งหมด (Overview & Proportions)         -->
-      <!-- ===================================================================== -->
+      <!-- VIEW 1: ภาพรวม & สัดส่วน -->
       <div id="viewOverview">
-
-        <!-- 3-Column Divided KPI Bar -->
         <section class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs mb-6 grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200/70 overflow-hidden">
           <div class="p-5 hover:bg-slate-50/50 transition">
             <h3 class="text-xs font-semibold text-slate-500">Total Revenue (GMV สุทธิ)</h3>
@@ -190,23 +185,16 @@
           </div>
         </section>
 
-        <!-- สัดส่วนข้อมูลทั้งหมดในไฟล์ (Visual Proportion Breakdown) -->
+        <!-- สัดส่วนข้อมูลตามช่วงเวลาที่เลือก -->
         <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
-          
-          <!-- สัดส่วนยอดขายแยกตามประเภท (Regular vs Auction vs GWP) -->
           <div class="lg:col-span-6 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <h3 class="text-sm font-bold text-slate-900">สัดส่วนประเภทสินค้าในไฟล์ (Category Mix)</h3>
-                <p class="text-xs text-slate-400">เปรียบเทียบสัดส่วนสินค้าขายปกติ ประมูล (Action) และของแถม</p>
-              </div>
-            </div>
+            <h3 class="text-sm font-bold text-slate-900">สัดส่วนประเภทสินค้า (Category Mix)</h3>
+            <p class="text-xs text-slate-400">อัปเดตตามช่วงเวลาที่เลือก (ปี / เดือน / วัน)</p>
 
-            <!-- Horizontal Stacked Proportion Bar -->
-            <div class="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex my-4" id="categoryProportionBar">
-              <div id="barRegularPct" style="width: 70%" class="bg-blue-600 h-full transition-all duration-500" title="สินค้าปกติ"></div>
-              <div id="barAuctionPct" style="width: 15%" class="bg-indigo-500 h-full transition-all duration-500" title="ประมูล/นาทีทอง"></div>
-              <div id="barGwpPct" style="width: 15%" class="bg-amber-400 h-full transition-all duration-500" title="ของแถม (GWP)"></div>
+            <div class="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex my-4">
+              <div id="barRegularPct" style="width: 70%" class="bg-blue-600 h-full transition-all duration-500"></div>
+              <div id="barAuctionPct" style="width: 15%" class="bg-indigo-500 h-full transition-all duration-500"></div>
+              <div id="barGwpPct" style="width: 15%" class="bg-amber-400 h-full transition-all duration-500"></div>
             </div>
 
             <div class="grid grid-cols-3 gap-3 text-xs pt-1">
@@ -231,47 +219,38 @@
                   <span class="w-2 h-2 rounded-full bg-amber-400"></span> ของแถม (GWP)
                 </div>
                 <p id="propGwpVal" class="text-sm font-bold text-slate-900">0 ชิ้น</p>
-                <p id="propGwpPctTxt" class="text-[11px] text-slate-500">สมนาคุณฟรี</p>
+                <p class="text-[11px] text-slate-500">สมนาคุณฟรี</p>
               </div>
             </div>
           </div>
 
-          <!-- สัดส่วนสถานะคำสั่งซื้อทั้งหมด (Order Status Breakdown จากคอลัมน์สถานะใน Excel) -->
           <div class="lg:col-span-6 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
             <div>
-              <h3 class="text-sm font-bold text-slate-900">สัดส่วนสถานะออเดอร์ทั้งหมดในไฟล์ (Status Breakdown)</h3>
-              <p class="text-xs text-slate-400 mb-3">แสดงสัดส่วนทุกสถานะที่พบในไฟล์ Excel</p>
-              <div id="statusBreakdownContainer" class="space-y-2.5 max-h-40 overflow-y-auto custom-scrollbar pr-1">
-                <p class="text-xs text-slate-400">กำลังโหลดสัดส่วนสถานะ...</p>
-              </div>
+              <h3 class="text-sm font-bold text-slate-900">สัดส่วนสถานะออเดอร์ (Status Breakdown)</h3>
+              <p class="text-xs text-slate-400 mb-3">แสดงสัดส่วนสถานะคำสั่งซื้อในช่วงเวลาที่เลือก</p>
+              <div id="statusBreakdownContainer" class="space-y-2.5 max-h-40 overflow-y-auto custom-scrollbar pr-1"></div>
             </div>
           </div>
-
         </section>
 
-        <!-- Chart + Quick Day Compare Trigger -->
+        <!-- Main Trend Chart -->
         <section class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs mb-6">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
             <div>
               <h3 class="text-sm font-bold text-slate-900">แนวโน้มคำสั่งซื้อ (Order Volume Trend)</h3>
               <p id="chartSubText" class="text-xs text-slate-400 mt-0.5">เปรียบเทียบคำสั่งซื้อสำเร็จและยกเลิก</p>
             </div>
-            <div class="flex items-center gap-2">
-              <button onclick="switchSubView('compare')" class="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg font-semibold hover:bg-emerald-100 transition flex items-center gap-1.5">
-                <i class="ph-bold ph-scales"></i> เปิดโหมดเทียบวันชนวัน
-              </button>
-            </div>
+            <button onclick="switchSubView('compare')" class="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg font-semibold hover:bg-emerald-100 transition flex items-center gap-1.5">
+              <i class="ph-bold ph-scales"></i> เปิดโหมดเทียบวันชนวัน
+            </button>
           </div>
           <div class="h-72 relative w-full">
             <canvas id="workflowChart"></canvas>
           </div>
         </section>
-
       </div>
 
-      <!-- ===================================================================== -->
-      <!-- VIEW 2: ระบบพยากรณ์ยอดสั่งซื้อเดือนหน้า (Inventory Forecast)          -->
-      <!-- ===================================================================== -->
+      <!-- VIEW 2: Forecast สต็อกเดือนหน้า -->
       <div id="viewForecast" class="hidden">
         <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs mb-6">
           <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
@@ -280,44 +259,38 @@
                 <span class="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[11px] font-bold">AI Stock Forecast</span>
                 <h3 class="text-base font-bold text-slate-900">ประเมินยอดขายและจำนวนสั่งซื้อสินค้าเข้าสต็อกเดือนหน้า</h3>
               </div>
-              <p class="text-xs text-slate-500 mt-1">คำนวณจากค่าเฉลี่ยยอดขายจริงต่อเดือน + อัตราการเติบโตล่าสุด (Growth Trend) + เผื่อสต็อกกันขาด (Safety Stock)</p>
+              <p class="text-xs text-slate-500 mt-1">แยกรายสินค้าครบทุก SKU จากฐานข้อมูลจริง + เผื่อสต็อกกันขาด (Safety Stock)</p>
             </div>
 
-            <!-- ปรับระดับ Safety Stock ได้ -->
             <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
-              <label class="text-xs font-semibold text-slate-700">เผื่อสต็อกกันขาด (Safety Stock):</label>
+              <label class="text-xs font-semibold text-slate-700">เผื่อสต็อกกันขาด:</label>
               <select id="safetyStockSelect" onchange="renderForecastTable()" class="text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-bold text-purple-700 outline-none">
                 <option value="1.00">0% (สั่งพอดีเป๊ะ)</option>
                 <option value="1.15" selected>+15% (แนะนำมาตรฐาน)</option>
-                <option value="1.25">+25% (เผื่อช่วงแคมเปญใหญ่)</option>
+                <option value="1.25">+25% (เผื่อแคมเปญใหญ่)</option>
                 <option value="1.40">+40% (เผื่อสินค้าขายดีมาก)</option>
               </select>
             </div>
           </div>
 
-          <!-- Forecast Summary Cards -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div class="p-4 rounded-xl bg-purple-50/70 border border-purple-100">
               <p class="text-xs text-purple-700 font-medium">คาดการณ์ยอดขายรวมเดือนหน้า</p>
               <p id="fcTotalPredicted" class="text-2xl font-bold text-slate-900 mt-1">0 ชิ้น</p>
-              <p class="text-[11px] text-slate-500 mt-0.5">ประเมินจากฐานข้อมูลจริงในระบบ</p>
             </div>
             <div class="p-4 rounded-xl bg-blue-50/70 border border-blue-100">
               <p class="text-xs text-blue-700 font-medium">ยอดแนะนำสั่งซื้อเข้าสต็อก (รวมเผื่อขาด)</p>
               <p id="fcTotalRecommended" class="text-2xl font-bold text-blue-700 mt-1">0 ชิ้น</p>
-              <p class="text-[11px] text-slate-500 mt-0.5">ครอบคลุมสินค้าขายหลักและของแถม</p>
             </div>
             <div class="p-4 rounded-xl bg-amber-50/70 border border-amber-100">
               <p class="text-xs text-amber-700 font-medium">ของแถม (GWP) ที่ต้องเตรียมเดือนหน้า</p>
               <p id="fcTotalGwp" class="text-2xl font-bold text-amber-700 mt-1">0 ชิ้น</p>
-              <p class="text-[11px] text-slate-500 mt-0.5">ป้องกันของแถมหมดระหว่างไลฟ์</p>
             </div>
           </div>
 
-          <!-- Search Forecast -->
-          <div class="flex items-center justify-between gap-3 mb-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div class="relative w-full sm:w-72">
-              <input type="text" id="forecastSearchInput" onkeyup="renderForecastTable()" placeholder="ค้นหา Seller SKU หรือชื่อสินค้า..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pl-8 outline-none focus:bg-white focus:border-purple-500">
+              <input type="text" id="forecastSearchInput" onkeyup="renderForecastTable()" placeholder="ค้นหา SKU หรือชื่อสินค้า..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pl-8 outline-none focus:bg-white focus:border-purple-500">
               <i class="ph ph-magnifying-glass absolute left-2.5 top-2.5 text-slate-400"></i>
             </div>
             <select id="forecastTypeFilter" onchange="renderForecastTable()" class="text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-700 outline-none">
@@ -334,26 +307,22 @@
                 <tr>
                   <th class="py-3 px-3">#</th>
                   <th class="py-3 px-3">Seller SKU</th>
-                  <th class="py-3 px-3">ตัวอย่างชื่อสินค้า</th>
+                  <th class="py-3 px-3">ชื่อสินค้า (Product Name)</th>
                   <th class="py-3 px-3">ประเภท</th>
                   <th class="py-3 px-3 text-right">เฉลี่ยขาย/เดือน</th>
                   <th class="py-3 px-3 text-right">เดือนล่าสุด</th>
-                  <th class="py-3 px-3 text-center">แนวโน้ม (Trend)</th>
+                  <th class="py-3 px-3 text-center">แนวโน้ม</th>
                   <th class="py-3 px-3 text-right bg-purple-50/50 text-purple-900">คาดการณ์เดือนหน้า</th>
                   <th class="py-3 px-3 text-right bg-blue-50/70 text-blue-900 font-bold">ควรสั่งเข้าสต็อก</th>
                 </tr>
               </thead>
-              <tbody id="forecastTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="9" class="text-center py-8 text-slate-400">กำลังคำนวณการพยากรณ์...</td></tr>
-              </tbody>
+              <tbody id="forecastTableBody" class="divide-y divide-slate-100"></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- ===================================================================== -->
-      <!-- VIEW 3: กราฟเปรียบเทียบระหว่างวัน (Day-to-Day Comparison)             -->
-      <!-- ===================================================================== -->
+      <!-- VIEW 3: เปรียบเทียบวัน -->
       <div id="viewCompare" class="hidden">
         <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
           <div class="mb-5">
@@ -363,10 +332,7 @@
             <p class="text-xs text-slate-500 mt-0.5">เลือกวันที่ 2 วันใดก็ได้ (ข้ามเดือนหรือข้ามปีได้) เพื่อเปรียบเทียบยอดขาย GMV จำนวนออเดอร์ และของแถม</p>
           </div>
 
-          <!-- Day A vs Day B Selector -->
           <div class="grid grid-cols-1 md:grid-cols-11 gap-4 items-center bg-slate-50 p-4 rounded-2xl border border-slate-200/80 mb-6">
-            
-            <!-- Day A -->
             <div class="md:col-span-5 bg-white p-3.5 rounded-xl border border-blue-200 shadow-2xs">
               <span class="text-[11px] font-bold text-blue-600 uppercase tracking-wider">วันที่ 1 (Day A)</span>
               <div class="grid grid-cols-3 gap-2 mt-2">
@@ -383,7 +349,6 @@
 
             <div class="md:col-span-1 text-center font-bold text-slate-400 text-sm">VS</div>
 
-            <!-- Day B -->
             <div class="md:col-span-5 bg-white p-3.5 rounded-xl border border-indigo-200 shadow-2xs">
               <span class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">วันที่ 2 (Day B)</span>
               <div class="grid grid-cols-3 gap-2 mt-2">
@@ -397,30 +362,24 @@
                 <select id="compDayB" onchange="runDayComparison()" class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 font-bold"></select>
               </div>
             </div>
-
           </div>
 
-          <!-- Comparison Result Cards & Chart -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div class="lg:col-span-7 h-72 relative">
               <canvas id="compareDaysChart"></canvas>
             </div>
-            <div class="lg:col-span-5 space-y-3" id="compareSummaryCards">
-              <!-- Populated by JS -->
-            </div>
+            <div class="lg:col-span-5 space-y-3" id="compareSummaryCards"></div>
           </div>
         </div>
       </div>
 
-      <!-- ===================================================================== -->
-      <!-- VIEW 4: ของแถม (GWP)                                                  -->
-      <!-- ===================================================================== -->
+      <!-- VIEW 4: ของแถม (GWP) -->
       <div id="viewGwp" class="hidden">
         <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div>
               <h3 class="text-base font-bold text-slate-900">รายการของแถมสมนาคุณ (GWP Breakdown)</h3>
-              <p class="text-xs text-slate-400">สินค้า 0 บาท, ซองกันน้ำ, 1Day และของแถมโปรโมชั่น</p>
+              <p class="text-xs text-slate-400">แสดงข้อมูลตามช่วงเวลาที่เลือก (ปี / เดือน / วัน)</p>
             </div>
             <input type="text" id="gwpSearchInput" onkeyup="filterGwpDisplay()" placeholder="ค้นหาของแถม หรือ SKU..." class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none w-64">
           </div>
@@ -441,15 +400,13 @@
         </div>
       </div>
 
-      <!-- ===================================================================== -->
-      <!-- VIEW 5: ประมูลนาทีทอง (Action / Auction)                              -->
-      <!-- ===================================================================== -->
+      <!-- VIEW 5: ประมูลนาทีทอง -->
       <div id="viewAuction" class="hidden">
         <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div>
               <h3 class="text-base font-bold text-slate-900">รายการประมูลนาทีทอง (Action / Auction Deals)</h3>
-              <p class="text-xs text-slate-400">สินค้าที่มีคำว่า "นาทีทอง", "ประมูล" หรือ "action" ในชื่อสินค้า</p>
+              <p class="text-xs text-slate-400">แสดงข้อมูลตามช่วงเวลาที่เลือก (ปี / เดือน / วัน)</p>
             </div>
             <input type="text" id="auctionSearchInput" onkeyup="filterAuctionDisplay()" placeholder="ค้นหาสินค้าประมูล หรือ SKU..." class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none w-64">
           </div>
@@ -470,15 +427,13 @@
         </div>
       </div>
 
-      <!-- ===================================================================== -->
-      <!-- VIEW 6: สินค้าขายดีทั้งหมด (All Products)                             -->
-      <!-- ===================================================================== -->
+      <!-- VIEW 6: สินค้าขายดีทั้งหมด -->
       <div id="viewProducts" class="hidden">
         <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div>
               <h3 class="text-base font-bold text-slate-900">รายการสินค้าขายดีทั้งหมด (Product Ranking)</h3>
-              <p class="text-xs text-slate-400">จัดอันดับตามยอดขายสุทธิ (GMV) แยกราย SKU</p>
+              <p class="text-xs text-slate-400">แสดงข้อมูลตามช่วงเวลาที่เลือก (ปี / เดือน / วัน)</p>
             </div>
             <input type="text" id="productSearchInput" onkeyup="filterProductDisplay()" placeholder="ค้นหาชื่อสินค้า หรือ SKU..." class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none w-64">
           </div>
@@ -552,11 +507,51 @@
       if (viewName === 'products') filterProductDisplay();
     }
 
+    // สลับโหมด ทั้งปี / รายเดือน-รายวัน
     function setMode(mode) {
       currentMode = mode;
       document.getElementById('btnModeYear').className = mode === 'year' ? 'px-3 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-sm transition' : 'px-3 py-1 rounded-md text-slate-500 hover:text-slate-900 transition';
       document.getElementById('btnModeMonth').className = mode === 'month' ? 'px-3 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-sm transition' : 'px-3 py-1 rounded-md text-slate-500 hover:text-slate-900 transition';
       renderDashboard();
+    }
+
+    // เมื่อผู้ใช้เปลี่ยนเดือนหรือปี ให้สลับมาโหมดรายเดือน/วันอัตโนมัติเพื่อให้เห็นข้อมูลเปลี่ยนทันที
+    function onMonthOrYearChange() {
+      populateDayDropdown();
+      if (currentMode === 'year') {
+        setMode('month');
+      } else {
+        renderDashboard();
+      }
+    }
+
+    // เมื่อผู้ใช้เลือกวันที่เฉพาะเจาะจง ให้สลับมาโหมดรายเดือน/วันอัตโนมัติ
+    function onDaySelectChange() {
+      if (currentMode === 'year') {
+        setMode('month');
+      } else {
+        renderDashboard();
+      }
+    }
+
+    // ดึงโหนดข้อมูลของช่วงเวลาที่เลือกอยู่ในปัจจุบัน (ปี / เดือน / วัน)
+    function getActivePeriodNode() {
+      if (!summaryData || !summaryData.timeline) return null;
+      const y = document.getElementById('yearFilter').value || '2026';
+      const m = document.getElementById('monthFilter').value || '01';
+      const d = document.getElementById('dayFilter').value || 'all';
+
+      const yNode = summaryData.timeline[y];
+      if (!yNode) return null;
+
+      if (currentMode === 'year') {
+        return yNode;
+      } else {
+        const mNode = yNode.months?.[m];
+        if (!mNode) return null;
+        if (d === 'all') return mNode;
+        return mNode.days?.[d] || null;
+      }
     }
 
     function populateDayDropdown() {
@@ -565,13 +560,16 @@
       const daySelect = document.getElementById('dayFilter');
       const daysInMonth = new Date(year, parseInt(month), 0).getDate();
 
+      const oldVal = daySelect.value;
       daySelect.innerHTML = '<option value="all">ทั้งเดือน</option>';
       for (let d = 1; d <= daysInMonth; d++) {
         const dStr = String(d).padStart(2, '0');
         daySelect.innerHTML += `<option value="${dStr}">วันที่ ${d}</option>`;
       }
+      if (oldVal && oldVal !== 'all' && parseInt(oldVal) <= daysInMonth) {
+        daySelect.value = oldVal;
+      }
 
-      // เติมวันที่ให้ตัวเลือก Compare Day A & Day B
       ['compDayA', 'compDayB'].forEach((id, idx) => {
         const el = document.getElementById(id);
         if (el && el.options.length === 0) {
@@ -602,14 +600,19 @@
           const years = summaryData.years && summaryData.years.length > 0 ? summaryData.years : ['2026'];
           ['yearFilter', 'compYearA', 'compYearB'].forEach(id => {
             const sel = document.getElementById(id);
-            if (sel) {
-              sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
-            }
+            if (sel) sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
           });
+
+          // ตั้งค่าเดือนเริ่มต้นเป็นเดือนล่าสุดที่มีข้อมูลจริง
+          if (summaryData.activeMonths && summaryData.activeMonths.length > 0) {
+            const latestYM = summaryData.activeMonths[summaryData.activeMonths.length - 1];
+            const [ly, lm] = latestYM.split('-');
+            document.getElementById('yearFilter').value = ly;
+            document.getElementById('monthFilter').value = lm;
+          }
 
           populateDayDropdown();
           renderDashboard();
-          renderProportions();
         }
       } catch (err) {
         console.error(err);
@@ -617,22 +620,94 @@
       }
     }
 
-    // แสดงสัดส่วนข้อมูลทั้งหมดในไฟล์
-    function renderProportions() {
-      if (!summaryData) return;
+    function renderDashboard() {
+      if (!summaryData || !summaryData.timeline) return;
 
-      // 1. สัดส่วนประเภทสินค้า (Regular vs Auction vs GWP)
-      const regGmv = (summaryData.topProducts || []).reduce((a, b) => a + (b.totalAmount || 0), 0);
-      const aucGmv = (summaryData.auctionProducts || []).reduce((a, b) => a + (b.totalAmount || 0), 0);
-      const gwpQty = (summaryData.gwpItems || []).reduce((a, b) => a + (b.quantity || 0), 0);
+      const selectedYear = document.getElementById('yearFilter').value || '2026';
+      const selectedMonth = document.getElementById('monthFilter').value || '01';
+      const selectedDay = document.getElementById('dayFilter').value || 'all';
 
-      const totalSales = regGmv + aucGmv || 1;
-      const regPct = Math.round((regGmv / totalSales) * 100);
-      const aucPct = 100 - regPct;
+      const yNode = summaryData.timeline[selectedYear] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, months: {} };
+      const activeNode = getActivePeriodNode() || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, regGmv: 0, aucGmv: 0, gwpQty: 0, statusBreakdown: {}, topProducts: [], auctionProducts: [], gwpItems: [] };
 
-      document.getElementById('barRegularPct').style.width = `${Math.max(regPct, 5)}%`;
-      document.getElementById('barAuctionPct').style.width = `${Math.max(aucPct, 5)}%`;
-      document.getElementById('barGwpPct').style.width = `12%`;
+      let labels = [], compCountList = [], cancCountList = [];
+
+      if (currentMode === 'year') {
+        document.getElementById('periodHeading').innerText = `Reports & Analytics: ประจำปี ${selectedYear} (ทั้งปี)`;
+        document.getElementById('chartSubText').innerText = `สถิติคำสั่งซื้อแยกตาม 12 เดือน ประจำปี ${selectedYear}`;
+        labels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        for (let i = 1; i <= 12; i++) {
+          const mStr = String(i).padStart(2, '0');
+          const mNode = yNode.months?.[mStr] || { compCount: 0, cancCount: 0 };
+          compCountList.push(mNode.compCount || 0);
+          cancCountList.push(mNode.cancCount || 0);
+        }
+      } else {
+        const mNode = yNode.months?.[selectedMonth] || { days: {} };
+        const daysInMonth = new Date(selectedYear, parseInt(selectedMonth), 0).getDate();
+        if (selectedDay === 'all') {
+          document.getElementById('periodHeading').innerText = `Reports & Analytics: เดือน ${selectedMonth}/${selectedYear} (ทั้งเดือน)`;
+          document.getElementById('chartSubText').innerText = `สถิติคำสั่งซื้อรายวัน วันที่ 1 - ${daysInMonth}`;
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dStr = String(d).padStart(2, '0');
+            labels.push(`${d}`);
+            const dNode = mNode.days?.[dStr] || { compCount: 0, cancCount: 0 };
+            compCountList.push(dNode.compCount || 0);
+            cancCountList.push(dNode.cancCount || 0);
+          }
+        } else {
+          document.getElementById('periodHeading').innerText = `Reports & Analytics: วันที่ ${parseInt(selectedDay)}/${selectedMonth}/${selectedYear}`;
+          document.getElementById('chartSubText').innerText = `ข้อมูลเจาะจงรายวัน วันที่ ${parseInt(selectedDay)} เดือน ${selectedMonth}/${selectedYear}`;
+          labels.push(`วันที่ ${parseInt(selectedDay)}`);
+          compCountList.push(activeNode.compCount || 0);
+          cancCountList.push(activeNode.cancCount || 0);
+        }
+      }
+
+      const totalComp = activeNode.compCount || 0;
+      const totalCanc = activeNode.cancCount || 0;
+      const totalCompGmv = activeNode.compGmv || 0;
+      const totalCancGmv = activeNode.cancGmv || 0;
+      const totalBuyers = activeNode.buyersCount || 0;
+
+      const totalOrders = totalComp + totalCanc;
+      const totalGmv = totalCompGmv + totalCancGmv;
+      const compRate = totalOrders > 0 ? ((totalComp / totalOrders) * 100).toFixed(1) : '0.0';
+      const cancRate = totalOrders > 0 ? ((totalCanc / totalOrders) * 100).toFixed(1) : '0.0';
+      const aov = totalComp > 0 ? (totalCompGmv / totalComp) : 0;
+
+      document.getElementById('cardTotalGmv').innerText = '฿' + totalGmv.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      document.getElementById('badgeCompRate').innerText = `↗ ${compRate}%`;
+      document.getElementById('txtCompGmv').innerText = '฿' + totalCompGmv.toLocaleString(undefined, {maximumFractionDigits: 0});
+
+      document.getElementById('cardTotalBuyers').innerText = totalBuyers.toLocaleString();
+      document.getElementById('txtCompCount').innerText = totalComp.toLocaleString();
+      document.getElementById('cardAov').innerText = '฿' + aov.toLocaleString(undefined, {maximumFractionDigits: 0});
+
+      document.getElementById('txtCancelRateMain').innerText = `${cancRate}%`;
+      document.getElementById('txtCancCount').innerText = totalCanc.toLocaleString();
+      document.getElementById('txtCancGmv').innerText = '฿' + totalCancGmv.toLocaleString(undefined, {maximumFractionDigits: 0});
+
+      // อัปเดตสัดส่วนและตารางทั้งหมดตามช่วงเวลาที่เลือก
+      renderProportions(activeNode);
+      renderMainChart(labels, compCountList, cancCountList);
+      filterProductDisplay();
+      filterAuctionDisplay();
+      filterGwpDisplay();
+    }
+
+    function renderProportions(node) {
+      const regGmv = node.regGmv || 0;
+      const aucGmv = node.aucGmv || 0;
+      const gwpQty = node.gwpQty || 0;
+
+      const totalSales = regGmv + aucGmv;
+      const regPct = totalSales > 0 ? Math.round((regGmv / totalSales) * 100) : 0;
+      const aucPct = totalSales > 0 ? (100 - regPct) : 0;
+
+      document.getElementById('barRegularPct').style.width = totalSales > 0 ? `${Math.max(regPct, 4)}%` : '0%';
+      document.getElementById('barAuctionPct').style.width = aucGmv > 0 ? `${Math.max(aucPct, 4)}%` : '0%';
+      document.getElementById('barGwpPct').style.width = gwpQty > 0 ? '12%' : '0%';
 
       document.getElementById('propRegularVal').innerText = '฿' + regGmv.toLocaleString(undefined, {maximumFractionDigits: 0});
       document.getElementById('propRegularPctTxt').innerText = `${regPct}% ของยอดขาย`;
@@ -642,14 +717,13 @@
 
       document.getElementById('propGwpVal').innerText = `${gwpQty.toLocaleString()} ชิ้น`;
 
-      // 2. สัดส่วนสถานะออเดอร์ทั้งหมดในไฟล์
-      const statusMap = summaryData.statusBreakdown || {};
+      const statusMap = node.statusBreakdown || {};
       const statusEntries = Object.entries(statusMap).sort((a, b) => b[1] - a[1]);
       const totalRows = statusEntries.reduce((a, b) => a + b[1], 0) || 1;
 
       const container = document.getElementById('statusBreakdownContainer');
       if (statusEntries.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400">ไม่มีข้อมูลสถานะ</p>`;
+        container.innerHTML = `<p class="text-xs text-slate-400">ไม่มีข้อมูลคำสั่งซื้อในช่วงเวลานี้</p>`;
       } else {
         container.innerHTML = statusEntries.map(([status, count]) => {
           const pct = ((count / totalRows) * 100).toFixed(1);
@@ -670,89 +744,14 @@
       }
     }
 
-    function renderDashboard() {
-      if (!summaryData || !summaryData.timeline) return;
-
-      const selectedYear = document.getElementById('yearFilter').value || '2026';
-      const selectedMonth = document.getElementById('monthFilter').value || '01';
-      const selectedDay = document.getElementById('dayFilter').value || 'all';
-
-      const yNode = summaryData.timeline[selectedYear] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, months: {} };
-      let labels = [], compCountList = [], cancCountList = [];
-      let totalComp = 0, totalCanc = 0, totalCompGmv = 0, totalCancGmv = 0, totalBuyers = 0;
-
-      if (currentMode === 'year') {
-        document.getElementById('periodHeading').innerText = `Reports & Analytics: ประจำปี ${selectedYear}`;
-        labels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        for (let i = 1; i <= 12; i++) {
-          const mStr = String(i).padStart(2, '0');
-          const mNode = yNode.months[mStr] || { compCount: 0, cancCount: 0 };
-          compCountList.push(mNode.compCount || 0);
-          cancCountList.push(mNode.cancCount || 0);
-        }
-        totalComp = yNode.compCount || 0;
-        totalCanc = yNode.cancCount || 0;
-        totalCompGmv = yNode.compGmv || 0;
-        totalCancGmv = yNode.cancGmv || 0;
-        totalBuyers = yNode.buyersCount || 0;
-      } else {
-        const mNode = yNode.months[selectedMonth] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, days: {} };
-        const daysInMonth = new Date(selectedYear, parseInt(selectedMonth), 0).getDate();
-        if (selectedDay === 'all') {
-          document.getElementById('periodHeading').innerText = `Reports & Analytics: เดือน ${selectedMonth}/${selectedYear}`;
-          for (let d = 1; d <= daysInMonth; d++) {
-            const dStr = String(d).padStart(2, '0');
-            labels.push(`${d}`);
-            const dNode = mNode.days ? (mNode.days[dStr] || { compCount: 0, cancCount: 0 }) : { compCount: 0, cancCount: 0 };
-            compCountList.push(dNode.compCount || 0);
-            cancCountList.push(dNode.cancCount || 0);
-          }
-          totalComp = mNode.compCount || 0;
-          totalCanc = mNode.cancCount || 0;
-          totalCompGmv = mNode.compGmv || 0;
-          totalCancGmv = mNode.cancGmv || 0;
-          totalBuyers = mNode.buyersCount || 0;
-        } else {
-          document.getElementById('periodHeading').innerText = `Reports & Analytics: วันที่ ${parseInt(selectedDay)}/${selectedMonth}/${selectedYear}`;
-          labels.push(`วันที่ ${parseInt(selectedDay)}`);
-          const dNode = (mNode.days && mNode.days[selectedDay]) || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0 };
-          compCountList.push(dNode.compCount || 0);
-          cancCountList.push(dNode.cancCount || 0);
-          totalComp = dNode.compCount || 0;
-          totalCanc = dNode.cancCount || 0;
-          totalCompGmv = dNode.compGmv || 0;
-          totalCancGmv = dNode.cancGmv || 0;
-          totalBuyers = dNode.buyersCount || 0;
-        }
-      }
-
-      const totalOrders = totalComp + totalCanc;
-      const totalGmv = totalCompGmv + totalCancGmv;
-      const compRate = totalOrders > 0 ? ((totalComp / totalOrders) * 100).toFixed(1) : '0.0';
-      const cancRate = totalOrders > 0 ? ((totalCanc / totalOrders) * 100).toFixed(1) : '0.0';
-      const aov = totalComp > 0 ? (totalCompGmv / totalComp) : 0;
-
-      document.getElementById('cardTotalGmv').innerText = '฿' + totalGmv.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-      document.getElementById('badgeCompRate').innerText = `↗ ${compRate}%`;
-      document.getElementById('txtCompGmv').innerText = '฿' + totalCompGmv.toLocaleString(undefined, {maximumFractionDigits: 0});
-
-      document.getElementById('cardTotalBuyers').innerText = totalBuyers.toLocaleString();
-      document.getElementById('txtCompCount').innerText = totalComp.toLocaleString();
-      document.getElementById('cardAov').innerText = '฿' + aov.toLocaleString(undefined, {maximumFractionDigits: 0});
-
-      document.getElementById('txtCancelRateMain').innerText = `${cancRate}%`;
-      document.getElementById('txtCancCount').innerText = totalCanc.toLocaleString();
-      document.getElementById('txtCancGmv').innerText = '฿' + totalCancGmv.toLocaleString(undefined, {maximumFractionDigits: 0});
-
-      renderMainChart(labels, compCountList, cancCountList);
-    }
-
     function renderMainChart(labels, compList, cancList) {
       const ctx = document.getElementById('workflowChart').getContext('2d');
       if (chartInstance) chartInstance.destroy();
 
+      const isSingleDay = labels.length === 1;
+
       chartInstance = new Chart(ctx, {
-        type: 'line',
+        type: isSingleDay ? 'bar' : 'line',
         data: {
           labels: labels,
           datasets: [
@@ -760,21 +759,23 @@
               label: 'Confirmed (สำเร็จ)',
               data: compList,
               borderColor: '#2563eb',
-              backgroundColor: 'rgba(37, 99, 235, 0.08)',
-              borderWidth: 2.5,
+              backgroundColor: isSingleDay ? '#2563eb' : 'rgba(37, 99, 235, 0.08)',
+              borderWidth: isSingleDay ? 0 : 2.5,
               tension: 0.35,
-              fill: true,
-              pointRadius: 3
+              fill: !isSingleDay,
+              pointRadius: 3,
+              barThickness: isSingleDay ? 48 : undefined
             },
             {
               label: 'Canceled (ยกเลิก)',
               data: cancList,
               borderColor: '#f43f5e',
-              backgroundColor: 'transparent',
-              borderDash: [4, 4],
-              borderWidth: 2,
+              backgroundColor: isSingleDay ? '#f43f5e' : 'transparent',
+              borderDash: isSingleDay ? [] : [4, 4],
+              borderWidth: isSingleDay ? 0 : 2,
               tension: 0.35,
-              pointRadius: 2
+              pointRadius: 2,
+              barThickness: isSingleDay ? 48 : undefined
             }
           ]
         },
@@ -791,7 +792,6 @@
       });
     }
 
-    // ฟังก์ชันตาราง Forecast สั่งสินค้าเดือนหน้า
     function renderForecastTable() {
       if (!summaryData || !summaryData.forecast) return;
       const mult = parseFloat(document.getElementById('safetyStockSelect').value) || 1.15;
@@ -819,7 +819,7 @@
 
       const tbody = document.getElementById('forecastTableBody');
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-slate-400">ไม่พบข้อมูล SKU ที่ค้นหา</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-slate-400">ไม่พบข้อมูลสินค้า</td></tr>`;
         return;
       }
 
@@ -850,7 +850,6 @@
       }).join('');
     }
 
-    // ฟังก์ชันเปรียบเทียบวันชนวัน (Day A vs Day B)
     function runDayComparison() {
       if (!summaryData || !summaryData.timeline) return;
 
@@ -863,7 +862,7 @@
       const dB = document.getElementById('compDayB').value || '02';
 
       const getDayNode = (y, m, d) => {
-        return summaryData.timeline?.[y]?.months?.[m]?.days?.[d] || { compCount: 0, cancCount: 0, compGmv: 0, gwpQty: 0, auctionGmv: 0 };
+        return summaryData.timeline?.[y]?.months?.[m]?.days?.[d] || { compCount: 0, cancCount: 0, compGmv: 0, gwpQty: 0 };
       };
 
       const dataA = getDayNode(yA, mA, dA);
@@ -872,7 +871,6 @@
       const labelA = `${dA}/${mA}/${yA}`;
       const labelB = `${dB}/${mB}/${yB}`;
 
-      // วาดกราฟแท่งเปรียบเทียบ
       const ctx = document.getElementById('compareDaysChart').getContext('2d');
       if (compareChartInstance) compareChartInstance.destroy();
 
@@ -893,7 +891,6 @@
         }
       });
 
-      // การ์ดสรุปผลต่าง
       const diffGmv = dataB.compGmv - dataA.compGmv;
       const diffPct = dataA.compGmv > 0 ? ((diffGmv / dataA.compGmv) * 100).toFixed(1) : (dataB.compGmv > 0 ? '100.0' : '0.0');
       const diffColor = diffGmv >= 0 ? 'text-emerald-600' : 'text-rose-600';
@@ -919,10 +916,12 @@
     }
 
     function filterGwpDisplay() {
+      const node = getActivePeriodNode();
+      const list = node?.gwpItems || [];
       const q = (document.getElementById('gwpSearchInput')?.value || '').toLowerCase();
       const tbody = document.getElementById('gwpTableBody');
-      const filtered = (summaryData?.gwpItems || []).filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
-      tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="5" class="text-center py-8 text-slate-400">ไม่มีข้อมูลของแถม</td></tr>` :
+      const filtered = list.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+      tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="5" class="text-center py-8 text-slate-400">ไม่มีข้อมูลของแถมในช่วงเวลานี้</td></tr>` :
         filtered.map((item, idx) => `
           <tr class="hover:bg-slate-50">
             <td class="py-3 px-3 text-slate-400">${idx + 1}</td>
@@ -935,10 +934,12 @@
     }
 
     function filterAuctionDisplay() {
+      const node = getActivePeriodNode();
+      const list = node?.auctionProducts || [];
       const q = (document.getElementById('auctionSearchInput')?.value || '').toLowerCase();
       const tbody = document.getElementById('auctionTableBody');
-      const filtered = (summaryData?.auctionProducts || []).filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
-      tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="5" class="text-center py-8 text-slate-400">ไม่พบรายการประมูล</td></tr>` :
+      const filtered = list.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+      tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="5" class="text-center py-8 text-slate-400">ไม่พบรายการประมูลในช่วงเวลานี้</td></tr>` :
         filtered.map((item, idx) => `
           <tr class="hover:bg-slate-50">
             <td class="py-3 px-3 text-slate-400">${idx + 1}</td>
@@ -951,12 +952,13 @@
     }
 
     function filterProductDisplay() {
+      const node = getActivePeriodNode();
+      const list = node?.topProducts || [];
       const q = (document.getElementById('productSearchInput')?.value || '').toLowerCase();
       const tbody = document.getElementById('topProductTableBody');
-      const list = summaryData?.topProducts || [];
       const filtered = list.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
       const totalSum = list.reduce((a, b) => a + b.totalAmount, 0) || 1;
-      tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="8" class="text-center py-8 text-slate-400">ไม่พบสินค้า</td></tr>` :
+      tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="8" class="text-center py-8 text-slate-400">ไม่พบสินค้าในช่วงเวลานี้</td></tr>` :
         filtered.map((item, idx) => `
           <tr class="hover:bg-slate-50">
             <td class="py-3 px-3 text-slate-400">${idx + 1}</td>
