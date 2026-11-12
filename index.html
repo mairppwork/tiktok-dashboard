@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TikTok Order Pro - Analytics Command</title>
+  <title>TikTok Order Pro - Reports & Analytics</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -13,7 +13,7 @@
   <style>
     body {
       font-family: 'Inter', 'Prompt', sans-serif;
-      background-color: #f4f6fa;
+      background-color: #f8fafc;
       color: #0f172a;
     }
     .custom-scrollbar::-webkit-scrollbar {
@@ -24,340 +24,487 @@
       background-color: #cbd5e1;
       border-radius: 9999px;
     }
-    .navy-header {
-      background: linear-gradient(135deg, #0b1938 0%, #162d66 60%, #1e3a8a 100%);
-    }
   </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col">
 
-  <!-- Top Enterprise Navy Header -->
-  <header class="navy-header text-white pb-16 pt-4 px-6 lg:px-10 shadow-md">
-    <div class="max-w-[1440px] mx-auto">
+  <!-- Top Clean White Bar (ตามดีไซน์ต้นแบบ) -->
+  <header class="bg-white border-b border-slate-200/80 px-5 py-3 sticky top-0 z-30">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
       
-      <!-- Top Navigation Bar -->
-      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4 mb-6">
-        <div class="flex items-center gap-6">
-          <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold shadow-inner">
-              <i class="ph-bold ph-chart-polar text-lg"></i>
-            </div>
-            <span class="font-bold text-base tracking-tight">TikTok<span class="text-blue-300 font-normal">Command</span></span>
+      <!-- Brand & Mobile Menu Toggle -->
+      <div class="flex items-center gap-3">
+        <button onclick="toggleMobileSidebar()" class="lg:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
+          <i class="ph ph-list text-xl"></i>
+        </button>
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
+            <i class="ph-bold ph-tiktok-logo text-base"></i>
           </div>
-
-          <nav class="hidden md:flex items-center gap-1 bg-white/5 p-1 rounded-full border border-white/10 text-xs">
-            <button id="navDashboard" onclick="switchMainTab('dashboard')" class="px-4 py-1.5 rounded-full bg-white text-[#0b1938] font-semibold shadow-sm transition">
-              Overview
-            </button>
-            <button id="navGwp" onclick="switchMainTab('gwp')" class="px-4 py-1.5 rounded-full text-blue-100 hover:text-white hover:bg-white/10 font-medium transition">
-              ของแถม (GWP)
-            </button>
-            <button onclick="fetchOrders()" class="px-4 py-1.5 rounded-full text-blue-100 hover:text-white hover:bg-white/10 font-medium transition flex items-center gap-1.5">
-              <i class="ph ph-arrows-clockwise"></i> Sync ข้อมูล
-            </button>
-          </nav>
-        </div>
-
-        <!-- Filter Controls -->
-        <div class="flex items-center gap-2.5 flex-wrap">
-          <div class="bg-white/10 p-1 rounded-lg flex items-center text-xs border border-white/10">
-            <button id="btnModeYear" onclick="setMode('year')" class="px-3 py-1 rounded-md bg-white text-[#0b1938] font-semibold transition">ทั้งปี</button>
-            <button id="btnModeMonth" onclick="setMode('month')" class="px-3 py-1 rounded-md text-blue-100 hover:text-white transition">รายเดือน/วัน</button>
-          </div>
-
-          <select id="monthFilter" onchange="renderDashboard()" class="text-xs bg-white/10 border border-white/15 text-white rounded-lg px-2.5 py-1.5 outline-none focus:bg-[#0b1938]">
-            <option value="01" class="text-slate-900">ม.ค. (Jan)</option>
-            <option value="02" class="text-slate-900">ก.พ. (Feb)</option>
-            <option value="03" class="text-slate-900">มี.ค. (Mar)</option>
-            <option value="04" class="text-slate-900">เม.ย. (Apr)</option>
-            <option value="05" class="text-slate-900">พ.ค. (May)</option>
-            <option value="06" class="text-slate-900">มิ.ย. (Jun)</option>
-            <option value="07" class="text-slate-900">ก.ค. (Jul)</option>
-            <option value="08" class="text-slate-900">ส.ค. (Aug)</option>
-            <option value="09" class="text-slate-900">ก.ย. (Sep)</option>
-            <option value="10" class="text-slate-900">ต.ค. (Oct)</option>
-            <option value="11" class="text-slate-900">พ.ย. (Nov)</option>
-            <option value="12" class="text-slate-900">ธ.ค. (Dec)</option>
-          </select>
-
-          <select id="dayFilter" onchange="renderDashboard()" class="text-xs bg-white/10 border border-white/15 text-white rounded-lg px-2.5 py-1.5 outline-none focus:bg-[#0b1938]">
-            <option value="all" class="text-slate-900">ทั้งเดือน</option>
-          </select>
-
-          <select id="yearFilter" onchange="populateDayDropdown(); renderDashboard();" class="text-xs bg-white/10 border border-white/15 text-white font-semibold rounded-lg px-2.5 py-1.5 outline-none focus:bg-[#0b1938]">
-            <option value="2026" class="text-slate-900">2026</option>
-          </select>
-
-          <span id="syncStatusBadge" class="text-[11px] bg-blue-500/20 text-blue-200 border border-blue-400/30 font-medium px-3 py-1 rounded-full flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Synced
-          </span>
+          <span class="font-bold text-base tracking-tight text-slate-900">TikTok<span class="text-blue-600">Pro</span></span>
         </div>
       </div>
 
-      <!-- Hero Banner Summary Row -->
-      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <p class="text-xs text-blue-300 font-medium mb-1">Analytics / Sales Performance</p>
-          <h1 id="periodHeading" class="text-2xl font-bold tracking-tight text-white">สรุปภาพรวมคำสั่งซื้อ: ประจำปี 2026</h1>
-          <p class="text-xs text-blue-200/80 mt-1">คำนวณยอดขายสุทธิ ตัดออเดอร์ซ้ำ และแยกกลุ่มสินค้าอัตโนมัติ</p>
+      <!-- Center Quick Search & Period Filters -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <div class="bg-slate-100 p-1 rounded-lg flex items-center text-xs">
+          <button id="btnModeYear" onclick="setMode('year')" class="px-3 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-sm transition">ทั้งปี</button>
+          <button id="btnModeMonth" onclick="setMode('month')" class="px-3 py-1 rounded-md text-slate-500 hover:text-slate-900 transition">รายเดือน/วัน</button>
         </div>
 
-        <div class="flex items-center gap-6 bg-white/5 border border-white/10 rounded-xl px-5 py-3 backdrop-blur-sm">
-          <div>
-            <p class="text-[11px] text-blue-200">Total Orders</p>
-            <p id="heroTotalOrders" class="text-xl font-bold text-white">0</p>
-          </div>
-          <div class="h-8 w-px bg-white/15"></div>
-          <div>
-            <p class="text-[11px] text-blue-200">Completed Rate</p>
-            <p id="heroCompRate" class="text-xl font-bold text-emerald-400">0.0%</p>
-          </div>
-          <div class="h-8 w-px bg-white/15"></div>
-          <div>
-            <p class="text-[11px] text-blue-200">Canceled</p>
-            <p id="heroCancCount" class="text-xl font-bold text-rose-300">0</p>
-          </div>
-        </div>
+        <select id="monthFilter" onchange="renderDashboard()" class="text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 outline-none hover:border-slate-300">
+          <option value="01">ม.ค. (Jan)</option>
+          <option value="02">ก.พ. (Feb)</option>
+          <option value="03">มี.ค. (Mar)</option>
+          <option value="04">เม.ย. (Apr)</option>
+          <option value="05">พ.ค. (May)</option>
+          <option value="06">มิ.ย. (Jun)</option>
+          <option value="07">ก.ค. (Jul)</option>
+          <option value="08">ส.ค. (Aug)</option>
+          <option value="09">ก.ย. (Sep)</option>
+          <option value="10">ต.ค. (Oct)</option>
+          <option value="11">พ.ย. (Nov)</option>
+          <option value="12">ธ.ค. (Dec)</option>
+        </select>
+
+        <select id="dayFilter" onchange="renderDashboard()" class="text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 outline-none hover:border-slate-300">
+          <option value="all">ทั้งเดือน</option>
+        </select>
+
+        <select id="yearFilter" onchange="populateDayDropdown(); renderDashboard();" class="text-xs bg-white border border-slate-200 text-slate-800 font-semibold rounded-lg px-2.5 py-1.5 outline-none hover:border-slate-300">
+          <option value="2026">2026</option>
+        </select>
+      </div>
+
+      <!-- Right Action Buttons -->
+      <div class="flex items-center gap-2.5">
+        <span id="syncStatusBadge" class="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Synced
+        </span>
+        <button onclick="fetchOrders()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3.5 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5">
+          <i class="ph-bold ph-arrows-clockwise"></i> Sync ข้อมูล
+        </button>
       </div>
 
     </div>
   </header>
 
-  <!-- Main Workspace -->
-  <main class="flex-1 max-w-[1440px] w-full mx-auto px-6 lg:px-10 -mt-10 pb-12">
+  <!-- Main Layout Wrapper: Compact Left Sidebar + Workspace -->
+  <div class="flex-1 flex max-w-[1600px] w-full mx-auto">
 
-    <!-- Mobile Nav -->
-    <div class="flex md:hidden gap-2 mb-4">
-      <button onclick="switchMainTab('dashboard')" class="flex-1 py-2 bg-white rounded-lg text-xs font-bold text-[#0b1938] shadow-sm">Overview</button>
-      <button onclick="switchMainTab('gwp')" class="flex-1 py-2 bg-white/80 rounded-lg text-xs font-medium text-slate-600 shadow-sm">ของแถม (GWP)</button>
-    </div>
+    <!-- Compact Left Sidebar (ขนาดกะทัดรัด w-56 พร้อมเมนูย่อยใต้ Order) -->
+    <aside id="leftSidebar" class="w-56 bg-white border-r border-slate-200/80 shrink-0 p-3.5 hidden lg:flex flex-col justify-between">
+      <div class="space-y-1">
+        <p class="px-2.5 pt-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Navigation</p>
 
-    <!-- TAB 1: Overview Dashboard -->
-    <div id="tabDashboardView">
-
-      <!-- Clean 3-Column Divided KPI Card Bar (สไตล์การ์ดแบ่งคอลัมน์ติดกัน) -->
-      <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm mb-6 grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200/70 overflow-hidden">
-        
-        <!-- Column 1: Total Sales (GMV) -->
-        <div class="p-6 hover:bg-slate-50/50 transition">
-          <h3 class="text-sm font-semibold text-slate-900">Total Sales (GMV)</h3>
-          <p class="text-xs text-slate-400 mt-0.5">ยอดขายสุทธิจากคำสั่งซื้อสำเร็จ</p>
-          
-          <div class="flex items-center gap-3 my-3.5">
-            <span id="cardTotalGmv" class="text-3xl font-bold text-slate-950 tracking-tight">฿0.00</span>
-            <span id="badgeCompRate" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600">
-              <i class="ph-bold ph-trend-up"></i> 0.0%
+        <!-- Parent Menu: Order (คลิกยืด-หดเมนูย่อยได้) -->
+        <div>
+          <button onclick="toggleOrderSubmenu()" class="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-800 hover:bg-slate-100/80 transition">
+            <span class="flex items-center gap-2">
+              <i class="ph-fill ph-shopping-bag text-blue-600 text-base"></i>
+              <span>Order</span>
             </span>
-          </div>
-          
-          <p class="text-xs text-slate-500">
-            <span id="txtCompGmv" class="font-semibold text-emerald-600">฿0</span> ยอดขายสำเร็จสุทธิ
-          </p>
-        </div>
+            <i id="orderChevron" class="ph-bold ph-caret-down text-slate-400 text-xs transition-transform duration-200"></i>
+          </button>
 
-        <!-- Column 2: Unique Buyers & Orders -->
-        <div class="p-6 hover:bg-slate-50/50 transition">
-          <h3 class="text-sm font-semibold text-slate-900">Unique Buyers</h3>
-          <p class="text-xs text-slate-400 mt-0.5">จำนวนผู้ซื้อไม่ซ้ำรายชื่อ</p>
-          
-          <div class="flex items-center gap-3 my-3.5">
-            <span id="cardTotalBuyers" class="text-3xl font-bold text-slate-950 tracking-tight">0</span>
-            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-600">
-              <i class="ph-bold ph-shopping-bag"></i> <span id="txtCompCount">0</span> ออเดอร์
-            </span>
-          </div>
-          
-          <p class="text-xs text-slate-500">
-            เฉลี่ย <span id="cardAov" class="font-semibold text-blue-600">฿0.00</span> ต่อคำสั่งซื้อ
-          </p>
-        </div>
-
-        <!-- Column 3: Canceled Rate -->
-        <div class="p-6 hover:bg-slate-50/50 transition">
-          <h3 class="text-sm font-semibold text-slate-900">Canceled Rate</h3>
-          <p class="text-xs text-slate-400 mt-0.5">สัดส่วนคำสั่งซื้อที่ยกเลิก</p>
-          
-          <div class="flex items-center gap-3 my-3.5">
-            <span id="txtCancelRateMain" class="text-3xl font-bold text-slate-950 tracking-tight">0.0%</span>
-            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-600">
-              <i class="ph-bold ph-trend-down"></i> <span id="txtCancCount">0</span> บิล
-            </span>
-          </div>
-          
-          <p class="text-xs text-slate-500">
-            <span id="txtCancGmv" class="font-semibold text-rose-500">฿0.00</span> มูลค่ายอดยกเลิก
-          </p>
-        </div>
-
-      </section>
-
-      <!-- Middle Section: Stacked Bar Chart (8 Cols) + Auction Queue (4 Cols) -->
-      <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
-        
-        <!-- Left: Stacked Vertical Bar Chart -->
-        <div class="lg:col-span-8 bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex flex-col justify-between">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <div>
-              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <i class="ph-fill ph-chart-bar text-blue-600"></i> สถิติคำสั่งซื้อรายช่วงเวลา (Order Volume)
-              </h3>
-              <p id="chartSubText" class="text-xs text-slate-400 mt-0.5">เปรียบเทียบยอดออเดอร์สำเร็จและออเดอร์ยกเลิก ประจำปี 2026</p>
-            </div>
-            <div class="flex items-center gap-4 text-xs">
-              <span class="flex items-center gap-1.5 text-slate-600 font-medium">
-                <span class="w-2.5 h-2.5 rounded-sm bg-[#2563eb]"></span> Confirmed (สำเร็จ)
-              </span>
-              <span class="flex items-center gap-1.5 text-slate-600 font-medium">
-                <span class="w-2.5 h-2.5 rounded-sm bg-[#e11d48]"></span> Canceled (ยกเลิก)
-              </span>
-            </div>
-          </div>
-          <div class="h-72 relative w-full">
-            <canvas id="workflowChart"></canvas>
+          <!-- Sub-menu items inside Order -->
+          <div id="orderSubmenuList" class="mt-1 ml-3 pl-2.5 border-l border-slate-200 space-y-1">
+            <button id="subMenuOverview" onclick="switchSubView('overview')" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium bg-slate-900 text-white shadow-xs transition">
+              <i class="ph ph-chart-line-up text-sm"></i>
+              <span>ภาพรวมข้อมูล</span>
+            </button>
+            <button id="subMenuGwp" onclick="switchSubView('gwp')" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+              <i class="ph ph-gift text-sm text-amber-500"></i>
+              <span>ของแถม (GWP)</span>
+            </button>
+            <button id="subMenuAuction" onclick="switchSubView('auction')" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+              <i class="ph ph-lightning text-sm text-rose-500"></i>
+              <span>ประมูลนาทีทอง</span>
+            </button>
+            <button id="subMenuProducts" onclick="switchSubView('products')" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+              <i class="ph ph-package text-sm text-indigo-500"></i>
+              <span>รายการสินค้าทั้งหมด</span>
+            </button>
           </div>
         </div>
 
-        <!-- Right: Auction Deals Queue Card -->
-        <div class="lg:col-span-4 bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex flex-col">
-          <div class="flex items-center justify-between mb-1">
-            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <i class="ph-fill ph-lightning text-amber-500"></i> รายการประมูลนาทีทอง
-            </h3>
-            <span id="badgeAuctionCount" class="text-[11px] bg-blue-50 text-blue-700 font-semibold px-2.5 py-0.5 rounded-full">0 รายการ</span>
-          </div>
-          <p class="text-xs text-slate-400 mb-3">สินค้าหมวด "นาทีทอง" และรายการประมูลพิเศษ</p>
+      </div>
 
-          <div class="relative mb-3">
-            <input type="text" id="auctionSearchInput" onkeyup="filterAuctionDisplay()" placeholder="ค้นหาสินค้าประมูล หรือ SKU..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pl-8 outline-none focus:bg-white focus:border-blue-500 transition">
-            <i class="ph ph-magnifying-glass absolute left-2.5 top-2.5 text-slate-400"></i>
-          </div>
+      <!-- Compact Footer Note -->
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-[11px] text-slate-500">
+        <p class="font-semibold text-slate-700 mb-0.5">Order Engine v2</p>
+        <p class="leading-relaxed">ตัดรายการซ้ำและแยกกลุ่มของแถมอัตโนมัติ</p>
+      </div>
+    </aside>
 
-          <div class="overflow-y-auto max-h-64 custom-scrollbar flex-1 divide-y divide-slate-100 pr-1" id="auctionListContainer">
-            <p class="text-xs text-center text-slate-400 py-10">ไม่พบรายการประมูลนาทีทอง</p>
-          </div>
+    <!-- Main Content Workspace -->
+    <main class="flex-1 p-5 lg:p-7 overflow-y-auto">
+
+      <!-- Page Header Title (เหมือน Reports & Analytics ในภาพ) -->
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <div>
+          <h1 id="periodHeading" class="text-xl font-bold text-slate-900 tracking-tight">Reports & Analytics: ประจำปี 2026</h1>
+          <p class="text-xs text-slate-500 mt-0.5">ภาพรวมยอดขาย สถิติคำสั่งซื้อสำเร็จ และข้อมูลแยกตามหมวดหมู่</p>
         </div>
 
-      </section>
-
-      <!-- Bottom Section: Top Selling Products Clean Table -->
-      <section class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div>
-            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <i class="ph-fill ph-trophy text-blue-600"></i> Top Selling Products (10 อันดับสินค้าขายดี)
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">จัดอันดับตามยอดขายสุทธิ (GMV) แยกรายรหัส SKU • ตัดยอดของแถมออกแล้ว</p>
-          </div>
-          <div class="relative w-full sm:w-64">
-            <input type="text" id="productSearchInput" onkeyup="filterProductDisplay()" placeholder="ค้นหาชื่อสินค้า หรือ SKU..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pl-8 outline-none focus:bg-white focus:border-blue-500 transition">
-            <i class="ph ph-magnifying-glass absolute left-2.5 top-2.5 text-slate-400"></i>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-50/80 text-slate-500 font-semibold border-y border-slate-200/70">
-              <tr>
-                <th class="py-3 px-3 w-12">อันดับ</th>
-                <th class="py-3 px-3">ชื่อสินค้า (PRODUCT NAME)</th>
-                <th class="py-3 px-3">รหัส SKU</th>
-                <th class="py-3 px-3 text-right">จำนวนชิ้น</th>
-                <th class="py-3 px-3 text-right text-emerald-600">สำเร็จ</th>
-                <th class="py-3 px-3 text-right text-rose-500">ยกเลิก</th>
-                <th class="py-3 px-3 text-right">ยอดขาย (GMV)</th>
-                <th class="py-3 px-3 text-right">สัดส่วน</th>
-              </tr>
-            </thead>
-            <tbody id="topProductTableBody" class="divide-y divide-slate-100">
-              <tr>
-                <td colspan="8" class="text-center py-8 text-slate-400">กำลังโหลดรายการสินค้า...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-    </div>
-
-    <!-- TAB 2: GWP Page -->
-    <div id="tabGwpView" class="hidden">
-      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <div>
-            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-              <i class="ph-fill ph-gift text-blue-600"></i> รายการของแถมสมนาคุณ (GWP Breakdown)
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">สรุปยอดการแจกสินค้าของแถม 0 บาท, ซองกันน้ำ และรายการโปรโมชั่น</p>
-          </div>
-          <div class="relative w-full sm:w-64">
-            <input type="text" id="gwpSearchInput" onkeyup="filterGwpDisplay()" placeholder="ค้นหาของแถม หรือ SKU..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pl-8 outline-none focus:bg-white focus:border-blue-500">
-            <i class="ph ph-magnifying-glass absolute left-2.5 top-2.5 text-slate-400"></i>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-50/80 text-slate-500 font-semibold border-y border-slate-200/70">
-              <tr>
-                <th class="py-3 px-3 w-12">#</th>
-                <th class="py-3 px-3">ชื่อสินค้าของแถม (GWP NAME)</th>
-                <th class="py-3 px-3">รหัส SKU</th>
-                <th class="py-3 px-3 text-right">จำนวนที่แจก (ชิ้น)</th>
-                <th class="py-3 px-3 text-right">จำนวนออเดอร์</th>
-              </tr>
-            </thead>
-            <tbody id="gwpTableBody" class="divide-y divide-slate-100">
-              <tr>
-                <td colspan="5" class="text-center py-8 text-slate-400">ไม่มีข้อมูลของแถม</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Inline Quick Pills (สลับหมวดย่อยได้จากด้านบนด้วย) -->
+        <div class="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200/80 shadow-2xs text-xs">
+          <button id="pillOverview" onclick="switchSubView('overview')" class="px-3 py-1 rounded-lg bg-slate-900 text-white font-medium transition">ภาพรวม</button>
+          <button id="pillGwp" onclick="switchSubView('gwp')" class="px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition">ของแถม</button>
+          <button id="pillAuction" onclick="switchSubView('auction')" class="px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition">ประมูล</button>
+          <button id="pillProducts" onclick="switchSubView('products')" class="px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition">สินค้าขายดี</button>
         </div>
       </div>
-    </div>
 
-  </main>
+      <!-- VIEW 1: ภาพรวมข้อมูล (Overview) -->
+      <div id="viewOverview">
+
+        <!-- 4 Top KPI Cards (ดีไซน์ขาวสะอาด ไอคอนมุมขวาบน ตัวเลขใหญ่ + ป้ายเปอร์เซ็นต์) -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+          
+          <!-- Card 1: Total Revenue (GMV) -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-500 mb-2">
+              <span class="text-xs font-medium">Total Revenue (GMV)</span>
+              <div class="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-600">
+                <i class="ph ph-currency-btc text-sm"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-bold text-slate-900 tracking-tight my-1" id="cardTotalGmv">฿0.00</div>
+            <div class="flex items-center gap-2 mt-2 text-[11px]">
+              <span id="badgeCompRate" class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">↗ 0.0%</span>
+              <span class="text-slate-400">อัตราสำเร็จสุทธิ</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Net Completed GMV -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-500 mb-2">
+              <span class="text-xs font-medium">Completed Sales</span>
+              <div class="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-600">
+                <i class="ph ph-check-circle text-sm"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-bold text-slate-900 tracking-tight my-1" id="txtCompGmv">฿0.00</div>
+            <div class="flex items-center gap-2 mt-2 text-[11px]">
+              <span id="txtCompCountBadge" class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">0 บิล</span>
+              <span class="text-slate-400">เฉลี่ย <span id="cardAov" class="text-slate-600 font-medium">฿0</span>/บิล</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Unique Buyers -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-500 mb-2">
+              <span class="text-xs font-medium">Unique Buyers</span>
+              <div class="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-600">
+                <i class="ph ph-users text-sm"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-bold text-slate-900 tracking-tight my-1" id="cardTotalBuyers">0</div>
+            <div class="flex items-center gap-2 mt-2 text-[11px]">
+              <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">Active</span>
+              <span class="text-slate-400">ผู้ซื้อไม่ซ้ำรายชื่อ</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Canceled Rate -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-500 mb-2">
+              <span class="text-xs font-medium">Canceled Rate</span>
+              <div class="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-600">
+                <i class="ph ph-x-circle text-sm"></i>
+              </div>
+            </div>
+            <div class="text-2xl font-bold text-slate-900 tracking-tight my-1" id="txtCancelRateMain">0.0%</div>
+            <div class="flex items-center gap-2 mt-2 text-[11px]">
+              <span id="txtCancCountBadge" class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 font-semibold">0 ยกเลิก</span>
+              <span id="txtCancGmv" class="text-slate-400">฿0.00</span>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Middle Section: Smooth Trend Chart (ซ้าย 8 คอลัมน์) + Side Breakdown Cards (ขวา 4 คอลัมน์ เหมือนในภาพ) -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
+          
+          <!-- Left: Chart Card -->
+          <div class="lg:col-span-8 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Order Volume & Trend</h3>
+                <p id="chartSubText" class="text-xs text-slate-400 mt-0.5">เปรียบเทียบคำสั่งซื้อสำเร็จและยกเลิก ประจำปี 2026</p>
+              </div>
+
+              <!-- Toggle Line / Bar Chart -->
+              <div class="flex items-center gap-2">
+                <div class="bg-slate-100 p-0.5 rounded-lg flex text-[11px]">
+                  <button id="btnChartLine" onclick="switchChartType('line')" class="px-2.5 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-2xs transition">กราฟเส้น</button>
+                  <button id="btnChartBar" onclick="switchChartType('bar')" class="px-2.5 py-1 rounded-md text-slate-500 hover:text-slate-900 transition">กราฟแท่ง</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="h-72 relative w-full">
+              <canvas id="workflowChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Right: Stacked Summary Metric Boxes (เหมือนกล่องขวาในภาพ) -->
+          <div class="lg:col-span-4 flex flex-col gap-3">
+            
+            <div class="bg-white rounded-xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between">
+              <div>
+                <p class="text-[11px] font-medium text-slate-400">Total Orders (ออเดอร์ทั้งหมด)</p>
+                <p id="sideTotalOrders" class="text-lg font-bold text-slate-900 mt-0.5">0 บิล</p>
+              </div>
+              <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i class="ph-bold ph-receipt"></i></span>
+            </div>
+
+            <div class="bg-white rounded-xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between">
+              <div>
+                <p class="text-[11px] font-medium text-slate-400">GWP Distributed (ของแถมที่แจก)</p>
+                <p id="sideTotalGwpQty" class="text-lg font-bold text-amber-600 mt-0.5">0 ชิ้น</p>
+              </div>
+              <button onclick="switchSubView('gwp')" class="text-[11px] text-blue-600 hover:underline font-medium">ดูรายการ →</button>
+            </div>
+
+            <div class="bg-white rounded-xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between">
+              <div>
+                <p class="text-[11px] font-medium text-slate-400">Auction Deals (ยอดประมูลนาทีทอง)</p>
+                <p id="sideTotalAuctionGmv" class="text-lg font-bold text-indigo-600 mt-0.5">฿0.00</p>
+              </div>
+              <button onclick="switchSubView('auction')" class="text-[11px] text-blue-600 hover:underline font-medium">ดูรายการ →</button>
+            </div>
+
+            <div class="bg-white rounded-xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between">
+              <div>
+                <p class="text-[11px] font-medium text-slate-400">Top SKU Share (สัดส่วนสินค้าอันดับ 1)</p>
+                <p id="sideTopSkuShare" class="text-lg font-bold text-emerald-600 mt-0.5">0.0%</p>
+              </div>
+              <button onclick="switchSubView('products')" class="text-[11px] text-blue-600 hover:underline font-medium">ดูทั้งหมด →</button>
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- Bottom Preview: Top 5 Products -->
+        <section class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Top Selling Products (สินค้าขายดี 5 อันดับแรก)</h3>
+              <p class="text-xs text-slate-400">สรุปยอดขายสุทธิแยกราย SKU</p>
+            </div>
+            <button onclick="switchSubView('products')" class="text-xs text-blue-600 hover:text-blue-700 font-semibold">ดูสินค้าทั้งหมด →</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 font-semibold border-y border-slate-200/70">
+                <tr>
+                  <th class="py-2.5 px-3 w-10">#</th>
+                  <th class="py-2.5 px-3">ชื่อสินค้า</th>
+                  <th class="py-2.5 px-3">SKU</th>
+                  <th class="py-2.5 px-3 text-right">จำนวนชิ้น</th>
+                  <th class="py-2.5 px-3 text-right">ยอดขาย (GMV)</th>
+                </tr>
+              </thead>
+              <tbody id="overviewTop5Body" class="divide-y divide-slate-100">
+                <tr><td colspan="5" class="text-center py-6 text-slate-400">กำลังโหลดข้อมูล...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- VIEW 2: ของแถม (GWP Sub-view) -->
+      <div id="viewGwp" class="hidden">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="ph-fill ph-gift text-amber-500"></i> รายการของแถมสมนาคุณ (GWP Breakdown)
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">แสดงรายการสินค้า 0 บาท, ซองกันน้ำ, 1Day และของแถมตามเงื่อนไขโปรโมชั่น</p>
+            </div>
+            <div class="relative w-full sm:w-64">
+              <input type="text" id="gwpSearchInput" onkeyup="filterGwpDisplay()" placeholder="ค้นหาของแถม หรือ SKU..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pl-8 outline-none focus:bg-white focus:border-blue-500">
+              <i class="ph ph-magnifying-glass absolute left-2.5 top-2.5 text-slate-400"></i>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 font-semibold border-y border-slate-200/70">
+                <tr>
+                  <th class="py-3 px-3 w-12">#</th>
+                  <th class="py-3 px-3">ชื่อสินค้าของแถม</th>
+                  <th class="py-3 px-3">รหัส SKU</th>
+                  <th class="py-3 px-3 text-right">จำนวนชิ้นที่แจก</th>
+                  <th class="py-3 px-3 text-right">จำนวนออเดอร์</th>
+                </tr>
+              </thead>
+              <tbody id="gwpTableBody" class="divide-y divide-slate-100">
+                <tr><td colspan="5" class="text-center py-8 text-slate-400">ไม่มีข้อมูลของแถม</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 3: ประมูลนาทีทอง (Auction Sub-view) -->
+      <div id="viewAuction" class="hidden">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="ph-fill ph-lightning text-rose-500"></i> รายการประมูลนาทีทอง (Auction Deals)
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">สินค้าที่ขึ้นต้นหรือมีคำว่า "นาทีทอง" และรายการประมูลพิเศษ</p>
+            </div>
+            <div class="relative w-full sm:w-64">
+              <input type="text" id="auctionSearchInput" onkeyup="filterAuctionDisplay()" placeholder="ค้นหาสินค้าประมูล หรือ SKU..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pl-8 outline-none focus:bg-white focus:border-blue-500">
+              <i class="ph ph-magnifying-glass absolute left-2.5 top-2.5 text-slate-400"></i>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 font-semibold border-y border-slate-200/70">
+                <tr>
+                  <th class="py-3 px-3 w-12">#</th>
+                  <th class="py-3 px-3">ชื่อสินค้าประมูล</th>
+                  <th class="py-3 px-3">รหัส SKU</th>
+                  <th class="py-3 px-3 text-right">จำนวนชิ้น</th>
+                  <th class="py-3 px-3 text-right">ยอดขายรวม (GMV)</th>
+                </tr>
+              </thead>
+              <tbody id="auctionTableBody" class="divide-y divide-slate-100">
+                <tr><td colspan="5" class="text-center py-8 text-slate-400">ไม่พบรายการประมูลนาทีทอง</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 4: รายการสินค้าทั้งหมด (All Products Sub-view) -->
+      <div id="viewProducts" class="hidden">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="ph-fill ph-package text-indigo-600"></i> รายการสินค้าขายดีทั้งหมด (Product Ranking)
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">จัดอันดับตามยอดขายสุทธิ (GMV) แยกรายรหัส SKU • ตัดของแถมออกแล้ว</p>
+            </div>
+            <div class="relative w-full sm:w-64">
+              <input type="text" id="productSearchInput" onkeyup="filterProductDisplay()" placeholder="ค้นหาชื่อสินค้า หรือ SKU..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pl-8 outline-none focus:bg-white focus:border-blue-500">
+              <i class="ph ph-magnifying-glass absolute left-2.5 top-2.5 text-slate-400"></i>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 font-semibold border-y border-slate-200/70">
+                <tr>
+                  <th class="py-3 px-3 w-12">อันดับ</th>
+                  <th class="py-3 px-3">ชื่อสินค้า (PRODUCT NAME)</th>
+                  <th class="py-3 px-3">รหัส SKU</th>
+                  <th class="py-3 px-3 text-right">จำนวนชิ้น</th>
+                  <th class="py-3 px-3 text-right text-emerald-600">สำเร็จ</th>
+                  <th class="py-3 px-3 text-right text-rose-500">ยกเลิก</th>
+                  <th class="py-3 px-3 text-right">ยอดขาย (GMV)</th>
+                  <th class="py-3 px-3 text-right">สัดส่วน</th>
+                </tr>
+              </thead>
+              <tbody id="topProductTableBody" class="divide-y divide-slate-100">
+                <tr><td colspan="8" class="text-center py-8 text-slate-400">กำลังโหลดรายการสินค้า...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
 
   <script>
     let summaryData = null;
     let currentMode = 'year';
+    let currentChartType = 'line';
     let chartInstance = null;
 
     let currentTopProductsList = [];
     let currentAuctionList = [];
     let currentGwpList = [];
 
-    function switchMainTab(tab) {
-      const tabDash = document.getElementById('tabDashboardView');
-      const tabGwp = document.getElementById('tabGwpView');
-      const navDash = document.getElementById('navDashboard');
-      const navGwp = document.getElementById('navGwp');
+    // ยืด-หดเมนูย่อยใต้ Order
+    function toggleOrderSubmenu() {
+      const list = document.getElementById('orderSubmenuList');
+      const icon = document.getElementById('orderChevron');
+      list.classList.toggle('hidden');
+      icon.classList.toggle('-rotate-90');
+    }
 
-      if (tab === 'dashboard') {
-        tabDash.classList.remove('hidden');
-        tabGwp.classList.add('hidden');
-        navDash.className = 'px-4 py-1.5 rounded-full bg-white text-[#0b1938] font-semibold shadow-sm transition';
-        navGwp.className = 'px-4 py-1.5 rounded-full text-blue-100 hover:text-white hover:bg-white/10 font-medium transition';
+    function toggleMobileSidebar() {
+      const sb = document.getElementById('leftSidebar');
+      sb.classList.toggle('hidden');
+      sb.classList.toggle('fixed');
+      sb.classList.toggle('inset-y-0');
+      sb.classList.toggle('left-0');
+      sb.classList.toggle('z-40');
+      sb.classList.toggle('pt-16');
+    }
+
+    // สลับหน้าย่อยภายใต้หมวด Order
+    function switchSubView(viewName) {
+      const views = ['overview', 'gwp', 'auction', 'products'];
+      views.forEach(v => {
+        const el = document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1));
+        const subBtn = document.getElementById('subMenu' + v.charAt(0).toUpperCase() + v.slice(1));
+        const pillBtn = document.getElementById('pill' + v.charAt(0).toUpperCase() + v.slice(1));
+
+        if (v === viewName) {
+          el.classList.remove('hidden');
+          if (subBtn) subBtn.className = 'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium bg-slate-900 text-white shadow-xs transition';
+          if (pillBtn) pillBtn.className = 'px-3 py-1 rounded-lg bg-slate-900 text-white font-medium transition';
+        } else {
+          el.classList.add('hidden');
+          if (subBtn) subBtn.className = 'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition';
+          if (pillBtn) pillBtn.className = 'px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition';
+        }
+      });
+
+      if (viewName === 'gwp') filterGwpDisplay();
+      if (viewName === 'auction') filterAuctionDisplay();
+      if (viewName === 'products') filterProductDisplay();
+    }
+
+    function switchChartType(type) {
+      currentChartType = type;
+      const btnLine = document.getElementById('btnChartLine');
+      const btnBar = document.getElementById('btnChartBar');
+      if (type === 'line') {
+        btnLine.className = 'px-2.5 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-2xs transition';
+        btnBar.className = 'px-2.5 py-1 rounded-md text-slate-500 hover:text-slate-900 transition';
       } else {
-        tabDash.classList.add('hidden');
-        tabGwp.classList.remove('hidden');
-        navDash.className = 'px-4 py-1.5 rounded-full text-blue-100 hover:text-white hover:bg-white/10 font-medium transition';
-        navGwp.className = 'px-4 py-1.5 rounded-full bg-white text-[#0b1938] font-semibold shadow-sm transition';
-        filterGwpDisplay();
+        btnBar.className = 'px-2.5 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-2xs transition';
+        btnLine.className = 'px-2.5 py-1 rounded-md text-slate-500 hover:text-slate-900 transition';
       }
+      renderDashboard();
     }
 
     function setMode(mode) {
       currentMode = mode;
       const btnYear = document.getElementById('btnModeYear');
       const btnMonth = document.getElementById('btnModeMonth');
-
       if (mode === 'year') {
-        btnYear.className = 'px-3 py-1 rounded-md bg-white text-[#0b1938] font-semibold transition';
-        btnMonth.className = 'px-3 py-1 rounded-md text-blue-100 hover:text-white transition';
+        btnYear.className = 'px-3 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-sm transition';
+        btnMonth.className = 'px-3 py-1 rounded-md text-slate-500 hover:text-slate-900 transition';
       } else {
-        btnMonth.className = 'px-3 py-1 rounded-md bg-white text-[#0b1938] font-semibold transition';
-        btnYear.className = 'px-3 py-1 rounded-md text-blue-100 hover:text-white transition';
+        btnMonth.className = 'px-3 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-sm transition';
+        btnYear.className = 'px-3 py-1 rounded-md text-slate-500 hover:text-slate-900 transition';
       }
       renderDashboard();
     }
@@ -369,12 +516,11 @@
       const daysInMonth = new Date(year, parseInt(month), 0).getDate();
 
       const oldVal = daySelect.value;
-      daySelect.innerHTML = '<option value="all" class="text-slate-900">ทั้งเดือน</option>';
+      daySelect.innerHTML = '<option value="all">ทั้งเดือน</option>';
       for (let d = 1; d <= daysInMonth; d++) {
         const dStr = String(d).padStart(2, '0');
         const opt = document.createElement('option');
         opt.value = dStr;
-        opt.className = 'text-slate-900';
         opt.innerText = `วันที่ ${d}`;
         daySelect.appendChild(opt);
       }
@@ -385,9 +531,7 @@
 
     async function fetchOrders() {
       const badge = document.getElementById('syncStatusBadge');
-      if (badge) {
-        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span> Syncing...`;
-      }
+      if (badge) badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span> Syncing...`;
 
       try {
         const res = await fetch('/api/orders');
@@ -395,16 +539,11 @@
 
         if (result.success && result.data) {
           const raw = result.data;
-
-          if (raw.orders && Array.isArray(raw.orders)) {
-            summaryData = transformRawData(raw.orders);
-          } else {
-            summaryData = raw;
-          }
+          summaryData = (raw.orders && Array.isArray(raw.orders)) ? transformRawData(raw.orders) : raw;
 
           if (badge) {
             const count = summaryData.totalCount || (summaryData.topProducts ? summaryData.topProducts.length : 0);
-            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Synced (${count.toLocaleString()})`;
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Synced (${count.toLocaleString()})`;
           }
 
           const yearSelect = document.getElementById('yearFilter');
@@ -413,7 +552,6 @@
             summaryData.years.forEach(y => {
               const opt = document.createElement('option');
               opt.value = y;
-              opt.className = 'text-slate-900';
               opt.innerText = y;
               yearSelect.appendChild(opt);
             });
@@ -427,20 +565,13 @@
           renderDashboard();
         }
       } catch (err) {
-        console.error('Fetch error:', err);
-        if (badge) {
-          badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Offline`;
-        }
+        console.error(err);
+        if (badge) badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Offline`;
       }
     }
 
     function transformRawData(orders) {
-      const timeline = {};
-      const topProductsMap = {};
-      const auctionMap = {};
-      const gwpMap = {};
-      const years = new Set();
-
+      const timeline = {}, topProductsMap = {}, auctionMap = {}, gwpMap = {}, years = new Set();
       orders.forEach(o => {
         let yr = '2026', mo = '01', dy = '01';
         if (o.date) {
@@ -456,7 +587,6 @@
           }
         }
         years.add(yr);
-
         if (!timeline[yr]) timeline[yr] = { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, months: {} };
         if (!timeline[yr].months[mo]) timeline[yr].months[mo] = { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, days: {} };
         if (!timeline[yr].months[mo].days[dy]) timeline[yr].months[mo].days[dy] = { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0 };
@@ -475,7 +605,7 @@
 
         const targetMap = isGwp ? gwpMap : (isAuction ? auctionMap : topProductsMap);
         const itemKey = `${pName}___${sku}`;
-        if (!targetMap[itemKey]) targetMap[itemKey] = { name: pName, sku: sku, quantity: 0, totalAmount: 0 };
+        if (!targetMap[itemKey]) targetMap[itemKey] = { name: pName, sku, quantity: 0, totalAmount: 0 };
         targetMap[itemKey].quantity += 1;
         targetMap[itemKey].totalAmount += amt;
       });
@@ -483,7 +613,7 @@
       return {
         totalCount: orders.length,
         years: Array.from(years).sort().reverse(),
-        timeline: timeline,
+        timeline,
         topProducts: Object.values(topProductsMap).sort((a,b) => b.totalAmount - a.totalAmount).slice(0, 50),
         auctionProducts: Object.values(auctionMap).sort((a,b) => b.totalAmount - a.totalAmount).slice(0, 50),
         gwpItems: Object.values(gwpMap).sort((a,b) => b.quantity - a.quantity).slice(0, 50)
@@ -493,24 +623,17 @@
     function renderDashboard() {
       if (!summaryData || !summaryData.timeline) return;
 
-      const yearSelect = document.getElementById('yearFilter');
-      const monthSelect = document.getElementById('monthFilter');
-      const daySelect = document.getElementById('dayFilter');
-
-      const selectedYear = yearSelect ? yearSelect.value : (summaryData.years[0] || '2026');
-      const selectedMonth = monthSelect ? monthSelect.value : '01';
-      const selectedDay = daySelect ? daySelect.value : 'all';
+      const selectedYear = document.getElementById('yearFilter').value || '2026';
+      const selectedMonth = document.getElementById('monthFilter').value || '01';
+      const selectedDay = document.getElementById('dayFilter').value || 'all';
 
       const yNode = summaryData.timeline[selectedYear] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, months: {} };
-
-      let labels = [];
-      let compCountList = [], cancCountList = [];
+      let labels = [], compCountList = [], cancCountList = [];
       let totalComp = 0, totalCanc = 0, totalCompGmv = 0, totalCancGmv = 0, totalBuyers = 0;
 
       if (currentMode === 'year') {
-        document.getElementById('periodHeading').innerText = `สรุปภาพรวมคำสั่งซื้อ: ประจำปี ${selectedYear}`;
-        document.getElementById('chartSubText').innerText = `สถิติคำสั่งซื้อรายเดือน ประจำปี ${selectedYear}`;
-
+        document.getElementById('periodHeading').innerText = `Reports & Analytics: ประจำปี ${selectedYear}`;
+        document.getElementById('chartSubText').innerText = `เปรียบเทียบคำสั่งซื้อสำเร็จและยกเลิก ประจำปี ${selectedYear}`;
         labels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
         for (let i = 1; i <= 12; i++) {
           const mStr = String(i).padStart(2, '0');
@@ -518,7 +641,6 @@
           compCountList.push(mNode.compCount || 0);
           cancCountList.push(mNode.cancCount || 0);
         }
-
         totalComp = yNode.compCount || 0;
         totalCanc = yNode.cancCount || 0;
         totalCompGmv = yNode.compGmv || 0;
@@ -527,11 +649,9 @@
       } else {
         const mNode = yNode.months[selectedMonth] || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0, days: {} };
         const daysInMonth = new Date(selectedYear, parseInt(selectedMonth), 0).getDate();
-
         if (selectedDay === 'all') {
-          document.getElementById('periodHeading').innerText = `สรุปภาพรวมคำสั่งซื้อ: เดือน ${selectedMonth}/${selectedYear}`;
+          document.getElementById('periodHeading').innerText = `Reports & Analytics: เดือน ${selectedMonth}/${selectedYear}`;
           document.getElementById('chartSubText').innerText = `สถิติคำสั่งซื้อรายวัน วันที่ 1 - ${daysInMonth}`;
-
           for (let d = 1; d <= daysInMonth; d++) {
             const dStr = String(d).padStart(2, '0');
             labels.push(`${d}`);
@@ -539,19 +659,17 @@
             compCountList.push(dNode.compCount || 0);
             cancCountList.push(dNode.cancCount || 0);
           }
-
           totalComp = mNode.compCount || 0;
           totalCanc = mNode.cancCount || 0;
           totalCompGmv = mNode.compGmv || 0;
           totalCancGmv = mNode.cancGmv || 0;
           totalBuyers = mNode.buyersCount || 0;
         } else {
-          document.getElementById('periodHeading').innerText = `สรุปคำสั่งซื้อ: วันที่ ${parseInt(selectedDay)}/${selectedMonth}/${selectedYear}`;
+          document.getElementById('periodHeading').innerText = `Reports & Analytics: วันที่ ${parseInt(selectedDay)}/${selectedMonth}/${selectedYear}`;
           labels.push(`วันที่ ${parseInt(selectedDay)}`);
           const dNode = (mNode.days && mNode.days[selectedDay]) || { compCount: 0, cancCount: 0, compGmv: 0, cancGmv: 0, buyersCount: 0 };
           compCountList.push(dNode.compCount || 0);
           cancCountList.push(dNode.cancCount || 0);
-
           totalComp = dNode.compCount || 0;
           totalCanc = dNode.cancCount || 0;
           totalCompGmv = dNode.compGmv || 0;
@@ -562,58 +680,75 @@
 
       const totalOrders = totalComp + totalCanc;
       const totalGmv = totalCompGmv + totalCancGmv;
-
       const compRate = totalOrders > 0 ? ((totalComp / totalOrders) * 100).toFixed(1) : '0.0';
       const cancRate = totalOrders > 0 ? ((totalCanc / totalOrders) * 100).toFixed(1) : '0.0';
       const aov = totalComp > 0 ? (totalCompGmv / totalComp) : 0;
 
-      // Hero Metrics
-      document.getElementById('heroTotalOrders').innerText = totalOrders.toLocaleString();
-      document.getElementById('heroCompRate').innerText = `${compRate}%`;
-      document.getElementById('heroCancCount').innerText = totalCanc.toLocaleString();
-
-      // 3-Column Divided KPI Cards
+      // Update Top 4 Cards
       document.getElementById('cardTotalGmv').innerText = '฿' + totalGmv.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-      document.getElementById('badgeCompRate').innerHTML = `<i class="ph-bold ph-trend-up"></i> ${compRate}%`;
-      document.getElementById('txtCompGmv').innerText = '฿' + totalCompGmv.toLocaleString(undefined, {maximumFractionDigits: 0});
+      document.getElementById('badgeCompRate').innerText = `↗ ${compRate}%`;
+
+      document.getElementById('txtCompGmv').innerText = '฿' + totalCompGmv.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      document.getElementById('txtCompCountBadge').innerText = `${totalComp.toLocaleString()} บิล`;
+      document.getElementById('cardAov').innerText = '฿' + aov.toLocaleString(undefined, {maximumFractionDigits: 0});
 
       document.getElementById('cardTotalBuyers').innerText = totalBuyers.toLocaleString();
-      document.getElementById('txtCompCount').innerText = totalComp.toLocaleString();
-      document.getElementById('cardAov').innerText = '฿' + aov.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
       document.getElementById('txtCancelRateMain').innerText = `${cancRate}%`;
-      document.getElementById('txtCancCount').innerText = totalCanc.toLocaleString();
-      document.getElementById('txtCancGmv').innerText = '฿' + totalCancGmv.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      document.getElementById('txtCancCountBadge').innerText = `${totalCanc.toLocaleString()} ยกเลิก`;
+      document.getElementById('txtCancGmv').innerText = '฿' + totalCancGmv.toLocaleString(undefined, {maximumFractionDigits: 0});
 
-      renderBarChart(labels, compCountList, cancCountList);
-      filterAuctionDisplay();
+      // Update Right Side Summary Boxes
+      document.getElementById('sideTotalOrders').innerText = `${totalOrders.toLocaleString()} บิล`;
+      const gwpQtySum = currentGwpList.reduce((acc, cur) => acc + (cur.quantity || 0), 0);
+      document.getElementById('sideTotalGwpQty').innerText = `${gwpQtySum.toLocaleString()} ชิ้น`;
+      const auctionGmvSum = currentAuctionList.reduce((acc, cur) => acc + (cur.totalAmount || 0), 0);
+      document.getElementById('sideTotalAuctionGmv').innerText = '฿' + auctionGmvSum.toLocaleString(undefined, {maximumFractionDigits: 0});
+      
+      const topTotal = currentTopProductsList.reduce((acc, cur) => acc + (cur.totalAmount || 0), 0);
+      const top1Share = (topTotal > 0 && currentTopProductsList[0]) ? ((currentTopProductsList[0].totalAmount / topTotal) * 100).toFixed(1) : '0.0';
+      document.getElementById('sideTopSkuShare').innerText = `${top1Share}%`;
+
+      renderChart(labels, compCountList, cancCountList);
+      renderOverviewTop5();
       filterProductDisplay();
+      filterAuctionDisplay();
+      filterGwpDisplay();
     }
 
-    function renderBarChart(labels, compList, cancList) {
+    function renderChart(labels, compList, cancList) {
       const ctx = document.getElementById('workflowChart').getContext('2d');
       if (chartInstance) chartInstance.destroy();
 
+      const isLine = currentChartType === 'line';
+
       chartInstance = new Chart(ctx, {
-        type: 'bar',
+        type: isLine ? 'line' : 'bar',
         data: {
           labels: labels,
           datasets: [
             {
               label: 'Confirmed (สำเร็จ)',
               data: compList,
-              backgroundColor: '#2563eb',
-              hoverBackgroundColor: '#1d4ed8',
-              borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 4, bottomRight: 4 },
-              barThickness: currentMode === 'year' ? 22 : undefined
+              borderColor: '#2563eb',
+              backgroundColor: isLine ? 'rgba(37, 99, 235, 0.08)' : '#2563eb',
+              borderWidth: isLine ? 2.5 : 0,
+              tension: 0.4,
+              fill: isLine,
+              pointRadius: isLine ? 3 : 0,
+              pointHoverRadius: 5,
+              borderRadius: isLine ? 0 : 4
             },
             {
               label: 'Canceled (ยกเลิก)',
               data: cancList,
-              backgroundColor: '#e11d48',
-              hoverBackgroundColor: '#be123c',
-              borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
-              barThickness: currentMode === 'year' ? 22 : undefined
+              borderColor: '#f43f5e',
+              backgroundColor: isLine ? 'transparent' : '#f43f5e',
+              borderDash: isLine ? [4, 4] : [],
+              borderWidth: isLine ? 2 : 0,
+              tension: 0.4,
+              pointRadius: isLine ? 2 : 0,
+              borderRadius: isLine ? 0 : 4
             }
           ]
         },
@@ -622,9 +757,13 @@
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: { display: false },
+            legend: {
+              position: 'top',
+              align: 'end',
+              labels: { boxWidth: 10, font: { family: 'Prompt', size: 11 } }
+            },
             tooltip: {
-              backgroundColor: '#0b1938',
+              backgroundColor: '#0f172a',
               titleFont: { family: 'Prompt', size: 12 },
               bodyFont: { family: 'Prompt', size: 12 },
               padding: 10,
@@ -633,12 +772,10 @@
           },
           scales: {
             x: {
-              stacked: true,
               grid: { display: false },
               ticks: { font: { family: 'Prompt', size: 11 }, color: '#64748b' }
             },
             y: {
-              stacked: true,
               beginAtZero: true,
               border: { display: false },
               grid: { color: '#f1f5f9' },
@@ -649,79 +786,80 @@
       });
     }
 
-    function filterProductDisplay() {
-      const q = (document.getElementById('productSearchInput').value || '').toLowerCase();
-      const tbody = document.getElementById('topProductTableBody');
+    function renderOverviewTop5() {
+      const tbody = document.getElementById('overviewTop5Body');
+      const top5 = currentTopProductsList.slice(0, 5);
+      if (top5.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">ไม่มีข้อมูลสินค้า</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = top5.map((item, idx) => `
+        <tr class="hover:bg-slate-50/70 transition">
+          <td class="py-2.5 px-3 font-semibold text-slate-400">${idx + 1}</td>
+          <td class="py-2.5 px-3 font-medium text-slate-800 max-w-sm truncate">${item.name}</td>
+          <td class="py-2.5 px-3 text-slate-500 font-mono text-[11px]">${item.sku || '-'}</td>
+          <td class="py-2.5 px-3 text-right font-medium">${(item.quantity || 0).toLocaleString()}</td>
+          <td class="py-2.5 px-3 text-right font-bold text-slate-900">฿${(item.totalAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        </tr>
+      `).join('');
+    }
 
+    function filterProductDisplay() {
+      const q = (document.getElementById('productSearchInput')?.value || '').toLowerCase();
+      const tbody = document.getElementById('topProductTableBody');
       const filtered = currentTopProductsList.filter(p => 
         (p.name && p.name.toLowerCase().includes(q)) || (p.sku && p.sku.toLowerCase().includes(q))
-      ).slice(0, 10);
+      );
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">ไม่พบสินค้าขายดีตรงกับคำค้นหา</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">ไม่พบสินค้าที่ค้นหา</td></tr>`;
         return;
       }
 
       const totalSum = currentTopProductsList.reduce((acc, cur) => acc + (cur.totalAmount || 0), 0) || 1;
-
       tbody.innerHTML = filtered.map((item, idx) => {
         const share = ((item.totalAmount / totalSum) * 100).toFixed(1);
         return `
-          <tr class="hover:bg-blue-50/40 transition">
+          <tr class="hover:bg-slate-50 transition">
             <td class="py-3 px-3 font-semibold text-slate-400">${idx + 1}</td>
-            <td class="py-3 px-3 font-medium text-slate-800 max-w-xs truncate" title="${item.name}">${item.name}</td>
+            <td class="py-3 px-3 font-medium text-slate-800 max-w-xs truncate">${item.name}</td>
             <td class="py-3 px-3 text-slate-500 font-mono text-[11px]">${item.sku || '-'}</td>
-            <td class="py-3 px-3 text-right font-medium text-slate-700">${(item.quantity || 0).toLocaleString()}</td>
+            <td class="py-3 px-3 text-right font-medium">${(item.quantity || 0).toLocaleString()}</td>
             <td class="py-3 px-3 text-right text-emerald-600 font-medium">${(item.completedCount !== undefined ? item.completedCount : item.quantity || 0).toLocaleString()}</td>
             <td class="py-3 px-3 text-right text-rose-500 font-medium">${(item.canceledCount || 0).toLocaleString()}</td>
             <td class="py-3 px-3 text-right font-bold text-slate-900">฿${(item.totalAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            <td class="py-3 px-3 text-right">
-              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium text-[11px]">${share}%</span>
-            </td>
+            <td class="py-3 px-3 text-right"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[11px]">${share}%</span></td>
           </tr>
         `;
       }).join('');
     }
 
     function filterAuctionDisplay() {
-      const q = (document.getElementById('auctionSearchInput').value || '').toLowerCase();
-      const container = document.getElementById('auctionListContainer');
-      const countBadge = document.getElementById('badgeAuctionCount');
-
+      const q = (document.getElementById('auctionSearchInput')?.value || '').toLowerCase();
+      const tbody = document.getElementById('auctionTableBody');
       const filtered = currentAuctionList.filter(p => 
         (p.name && p.name.toLowerCase().includes(q)) || (p.sku && p.sku.toLowerCase().includes(q))
       );
 
-      if (countBadge) countBadge.innerText = `${filtered.length} รายการ`;
-
       if (filtered.length === 0) {
-        container.innerHTML = `<p class="text-xs text-center text-slate-400 py-10">ไม่พบรายการประมูลนาทีทอง</p>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400">ไม่พบรายการประมูลนาทีทอง</td></tr>`;
         return;
       }
 
-      container.innerHTML = filtered.map(item => `
-        <div class="py-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50 px-1.5 rounded-lg transition">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 font-bold text-[10px]">
-              AUC
-            </div>
-            <div class="min-w-0">
-              <p class="font-semibold text-slate-800 truncate" title="${item.name}">${item.name}</p>
-              <p class="text-[11px] text-slate-400 font-mono truncate">${item.sku || '-'}</p>
-            </div>
-          </div>
-          <div class="text-right shrink-0">
-            <p class="font-bold text-slate-900">฿${(item.totalAmount || 0).toLocaleString()}</p>
-            <p class="text-[11px] text-blue-600 font-medium">${item.quantity || 0} ชิ้น</p>
-          </div>
-        </div>
+      tbody.innerHTML = filtered.map((item, idx) => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="py-3 px-3 font-semibold text-slate-400">${idx + 1}</td>
+          <td class="py-3 px-3 font-medium text-slate-800">${item.name}</td>
+          <td class="py-3 px-3 text-slate-500 font-mono text-[11px]">${item.sku || '-'}</td>
+          <td class="py-3 px-3 text-right font-medium">${(item.quantity || 0).toLocaleString()}</td>
+          <td class="py-3 px-3 text-right font-bold text-indigo-600">฿${(item.totalAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        </tr>
       `).join('');
     }
 
     function filterGwpDisplay() {
-      const q = (document.getElementById('gwpSearchInput').value || '').toLowerCase();
+      const q = (document.getElementById('gwpSearchInput')?.value || '').toLowerCase();
       const tbody = document.getElementById('gwpTableBody');
-
       const filtered = currentGwpList.filter(p => 
         (p.name && p.name.toLowerCase().includes(q)) || (p.sku && p.sku.toLowerCase().includes(q))
       );
@@ -732,11 +870,11 @@
       }
 
       tbody.innerHTML = filtered.map((item, idx) => `
-        <tr class="hover:bg-blue-50/40 transition">
+        <tr class="hover:bg-slate-50 transition">
           <td class="py-3 px-3 font-semibold text-slate-400">${idx + 1}</td>
           <td class="py-3 px-3 font-medium text-slate-800">${item.name}</td>
           <td class="py-3 px-3 text-slate-500 font-mono text-[11px]">${item.sku || '-'}</td>
-          <td class="py-3 px-3 text-right font-bold text-blue-600">${(item.quantity || 0).toLocaleString()}</td>
+          <td class="py-3 px-3 text-right font-bold text-amber-600">${(item.quantity || 0).toLocaleString()}</td>
           <td class="py-3 px-3 text-right text-slate-600">${(item.ordersCount || item.quantity || 0).toLocaleString()}</td>
         </tr>
       `).join('');
